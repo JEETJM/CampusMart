@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
@@ -11,6 +9,7 @@ html {
 }
 
 body {
+  margin: 0;
   font-family:
     Inter,
     system-ui,
@@ -18,7 +17,6 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-
   background: #f8fafc;
   color: #0f172a;
 }
@@ -44,12 +42,7 @@ img {
   display: block;
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-main {
-  flex: 1;
+::selection {
+  background: #dbeafe;
+  color: #1e3a8a;
 }
