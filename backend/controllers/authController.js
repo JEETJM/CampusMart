@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const cloudinary = require("../config/cloudinary");
 
 // ===============================
 // JWT HELPER
@@ -19,7 +20,8 @@ const generateToken = (userId) => {
 // ===============================
 const registerUser = async (req, res) => {
   try {
-    const { name, email, studentId, password, college } = req.body || {};
+    const { name, email, studentId, password, college, location } =
+      req.body || {};
 
     if (!name || !email || !studentId || !password) {
       return res.status(400).json({
@@ -35,9 +37,18 @@ const registerUser = async (req, res) => {
       });
     }
 
+    const cleanName = name.trim();
+
     const normalizedEmail = email.toLowerCase().trim();
 
     const normalizedStudentId = studentId.trim();
+
+    if (cleanName.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must contain at least 2 characters.",
+      });
+    }
 
     // Check existing email
     const existingEmail = await User.findOne({
@@ -68,11 +79,13 @@ const registerUser = async (req, res) => {
 
     // Create user
     const user = await User.create({
-      name: name.trim(),
+      name: cleanName,
       email: normalizedEmail,
       studentId: normalizedStudentId,
       password: hashedPassword,
       college: college?.trim() || "Narula Institute of Technology",
+      location: location?.trim() || "",
+      profileImage: "",
     });
 
     // Generate JWT
@@ -88,8 +101,12 @@ const registerUser = async (req, res) => {
         email: user.email,
         studentId: user.studentId,
         college: user.college,
+        location: user.location || "",
+        profileImage: user.profileImage || "",
         role: user.role,
         isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
   } catch (error) {
@@ -153,8 +170,12 @@ const loginUser = async (req, res) => {
         email: user.email,
         studentId: user.studentId,
         college: user.college,
+        location: user.location || "",
+        profileImage: user.profileImage || "",
         role: user.role,
         isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
   } catch (error) {
@@ -172,9 +193,7 @@ const loginUser = async (req, res) => {
 // ===============================
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(
-      req.user._id
-    ).select("-password");
+    const user = await User.findById(req.user._id).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -192,8 +211,7 @@ const getMe = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Server error while fetching user.",
+      message: "Server error while fetching user.",
     });
   }
 };
@@ -239,7 +257,6 @@ const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    // Email HTML
     const emailHTML = `
       <!DOCTYPE html>
       <html>
@@ -394,9 +411,7 @@ const verifyResetOTP = async (req, res) => {
 
     const user = await User.findOne({
       email: normalizedEmail,
-
       resetPasswordToken: hashedOTP,
-
       resetPasswordExpire: {
         $gt: new Date(),
       },
@@ -457,9 +472,7 @@ const resetPassword = async (req, res) => {
 
     const user = await User.findOne({
       email: normalizedEmail,
-
       resetPasswordToken: hashedOTP,
-
       resetPasswordExpire: {
         $gt: new Date(),
       },
@@ -472,11 +485,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Hash new password
     user.password = await bcrypt.hash(newPassword, 12);
 
-    // Clear OTP
     user.resetPasswordToken = null;
+
     user.resetPasswordExpire = null;
 
     await user.save();
@@ -496,6 +508,188 @@ const resetPassword = async (req, res) => {
 };
 
 // ===============================
+// UPDATE PROFILE
+// ===============================
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const { name, studentId, college, location } = req.body || {};
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // -------------------------------
+    // NAME
+    // -------------------------------
+
+    if (name !== undefined) {
+      const cleanName = String(name).trim();
+
+      if (cleanName.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: "Name must contain at least 2 characters.",
+        });
+      }
+
+      user.name = cleanName;
+    }
+
+    // -------------------------------
+    // STUDENT ID
+    // -------------------------------
+
+    if (studentId !== undefined && String(studentId).trim() !== "") {
+      const cleanStudentId = String(studentId).trim();
+
+      const duplicateStudent = await User.findOne({
+        studentId: cleanStudentId,
+        _id: {
+          $ne: user._id,
+        },
+      });
+
+      if (duplicateStudent) {
+        return res.status(400).json({
+          success: false,
+          message: "This Student ID is already in use.",
+        });
+      }
+
+      user.studentId = cleanStudentId;
+    }
+
+    // -------------------------------
+    // COLLEGE
+    // -------------------------------
+
+    if (college !== undefined) {
+      user.college = String(college).trim();
+    }
+
+    // -------------------------------
+    // LOCATION
+    // -------------------------------
+
+    if (location !== undefined) {
+      user.location = String(location).trim();
+    }
+
+    // -------------------------------
+    // PROFILE IMAGE
+    // -------------------------------
+
+    if (req.file) {
+      try {
+        console.log("Uploading CampusMart profile image...");
+
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "campusmart/profile-images",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            },
+          );
+
+          uploadStream.end(req.file.buffer);
+        });
+
+        // Delete old Cloudinary image if available
+        if (user.profileImage && user.profileImage.includes("cloudinary.com")) {
+          try {
+            const oldUrl = user.profileImage;
+
+            const uploadIndex = oldUrl.indexOf("/upload/");
+
+            if (uploadIndex !== -1) {
+              const afterUpload = oldUrl.substring(
+                uploadIndex + "/upload/".length,
+              );
+
+              const withoutVersion = afterUpload.replace(/^v\d+\//, "");
+
+              const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+
+              await cloudinary.uploader.destroy(publicId, {
+                resource_type: "image",
+              });
+
+              console.log("Old profile image removed from Cloudinary.");
+            }
+          } catch (deleteError) {
+            console.warn(
+              "Old profile image deletion failed:",
+              deleteError.message,
+            );
+
+            // Do not fail profile update
+            // just because old image deletion failed.
+          }
+        }
+
+        user.profileImage = result.secure_url;
+
+        console.log("Profile image uploaded successfully.");
+      } catch (uploadError) {
+        console.error("Profile Image Upload Error:", uploadError);
+
+        return res.status(500).json({
+          success: false,
+          message: "Failed to upload profile image.",
+        });
+      }
+    }
+
+    await user.save();
+
+    // -------------------------------
+    // COMPLETE UPDATED USER
+    // -------------------------------
+
+    const updatedUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      studentId: user.studentId,
+      college: user.college,
+      location: user.location || "",
+      profileImage: user.profileImage || "",
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update profile.",
+    });
+  }
+};
+
+// ===============================
 // EXPORTS
 // ===============================
 module.exports = {
@@ -505,4 +699,5 @@ module.exports = {
   forgotPassword,
   verifyResetOTP,
   resetPassword,
+  updateProfile,
 };

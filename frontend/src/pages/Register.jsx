@@ -1,350 +1,507 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"
-import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
+
 import {
   ArrowRight,
-  BadgeCheck,
   Eye,
   EyeOff,
   LockKeyhole,
   Mail,
+  MapPin,
   ShieldCheck,
+  Store,
   User,
-  UserPlus,
 } from "lucide-react";
+
+import api from "../services/api";
 
 function Register() {
   const navigate = useNavigate();
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    studentId: "",
     password: "",
-    confirmPassword: "",
+    college: "Narula Institute of Technology",
+    studentId: "",
+    location: "",
   });
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  /*
+  |--------------------------------------------------------------------------
+  | Input Change
+  |--------------------------------------------------------------------------
+  */
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (error) {
+      setError("");
+    }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  /*
+  |--------------------------------------------------------------------------
+  | Submit
+  |--------------------------------------------------------------------------
+  */
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Passwords do not match.");
-    return;
-  }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-  try {
-    const response = await axios.post(
-      "http://localhost:5000/api/auth/register",
-      {
-        name: formData.name,
-        email: formData.email,
-        studentId: formData.studentId,
+    setError("");
+    setSuccess("");
+
+    if (!formData.name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (!formData.studentId.trim()) {
+      setError("Please enter your student ID.");
+      return;
+    }
+
+    if (!formData.password) {
+      setError("Please create a password.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await api.post("/auth/register", {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
+        college: formData.college.trim(),
+        studentId: formData.studentId.trim(),
+        location: formData.location.trim(),
+      });
+
+      const token = response.data?.token || response.data?.accessToken;
+
+      const user = response.data?.user || response.data?.data?.user;
+
+      if (token) {
+        localStorage.setItem("campusmart_token", token);
+
+        if (user) {
+          localStorage.setItem("campusmart_user", JSON.stringify(user));
+        }
+
+        navigate("/profile", {
+          replace: true,
+        });
+
+        return;
       }
-    );
 
-    console.log("Register Response:", response.data);
+      setSuccess("Account created successfully. Redirecting to sign in...");
 
-    // Save JWT token
-    localStorage.setItem("campusmart_token", response.data.token);
+      setTimeout(() => {
+        navigate("/login", {
+          replace: true,
+        });
+      }, 1200);
+    } catch (error) {
+      console.error("Register Error:", error);
 
-    // Save user information
-    localStorage.setItem(
-      "campusmart_user",
-      JSON.stringify(response.data.user)
-    );
-
-    alert("Account created successfully!");
-
-    navigate("/profile");
-  } catch (error) {
-    console.error("Register Error:", error);
-
-    const message =
-      error.response?.data?.message ||
-      "Something went wrong. Please try again.";
-
-    alert(message);
-  }
-};
+      setError(
+        error.response?.data?.message || "Unable to create your account.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto grid min-h-screen max-w-7xl lg:grid-cols-2">
-        {/* LEFT — BRAND PANEL */}
-        <div className="hidden flex-col justify-between bg-slate-950 p-10 text-white lg:flex">
-          <div>
-            <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
-                <UserPlus size={22} />
+    <div className="min-h-[calc(100vh-76px)] bg-slate-50">
+      <div className="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl lg:grid-cols-2">
+        {/* ============================================================= */}
+        {/* LEFT PANEL                                                     */}
+        {/* ============================================================= */}
+
+        <div className="relative hidden overflow-hidden bg-blue-600 p-12 lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+
+          <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-slate-950/20 blur-3xl" />
+
+          <div className="relative">
+            <Link to="/" className="inline-flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
+                <Store size={22} className="text-blue-600" />
               </div>
 
               <div>
-                <p className="text-lg font-bold">CampusMart AI</p>
-                <p className="text-xs text-slate-400">Campus Marketplace</p>
+                <p className="text-lg font-extrabold text-white">
+                  CampusMart
+                  <span className="text-blue-200">AI</span>
+                </p>
+
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">
+                  Campus Marketplace
+                </p>
               </div>
             </Link>
+          </div>
 
-            <div className="mt-24 max-w-lg">
-              <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
-                Join your campus marketplace
-              </p>
-
-              <h1 className="mt-4 text-5xl font-bold leading-tight">
-                Buy, sell and exchange smarter.
-              </h1>
-
-              <p className="mt-6 text-lg leading-8 text-slate-400">
-                Create your student account and connect with verified students
-                around your campus.
-              </p>
+          <div className="relative">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white">
+              <ShieldCheck size={14} />
+              Student-first marketplace
             </div>
 
-            <div className="mt-12 space-y-5">
-              <div className="flex gap-4">
-                <BadgeCheck className="mt-0.5 text-blue-400" size={22} />
+            <h1 className="max-w-lg text-4xl font-extrabold leading-tight tracking-tight text-white xl:text-5xl">
+              Turn unused things into
+              <span className="text-blue-100"> value.</span>
+            </h1>
+
+            <p className="mt-5 max-w-md text-base leading-7 text-blue-100">
+              Create your account and connect with students around your campus
+              to buy, sell, exchange and rent.
+            </p>
+
+            <div className="mt-8 space-y-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+                  <ShieldCheck size={18} className="text-white" />
+                </div>
 
                 <div>
-                  <p className="font-semibold">Verified Student Community</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Connect with students from your campus.
+                  <p className="text-sm font-bold text-white">
+                    Student-focused
+                  </p>
+
+                  <p className="text-xs text-blue-100">
+                    Designed around campus life
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-4">
-                <ShieldCheck className="mt-0.5 text-blue-400" size={22} />
+              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+                  <Store size={18} className="text-white" />
+                </div>
 
                 <div>
-                  <p className="font-semibold">Safer Transactions</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Built for trusted campus-to-campus transactions.
+                  <p className="text-sm font-bold text-white">
+                    Buy & sell locally
+                  </p>
+
+                  <p className="text-xs text-blue-100">
+                    Convenient campus pickup
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <p className="text-sm text-slate-500">© 2026 CampusMart AI</p>
+          <p className="relative text-xs font-medium text-blue-200">
+            CampusMart AI
+          </p>
         </div>
 
-        {/* RIGHT — REGISTER FORM */}
+        {/* ============================================================= */}
+        {/* RIGHT FORM                                                     */}
+        {/* ============================================================= */}
+
         <div className="flex items-center justify-center px-5 py-10 sm:px-8">
-          <div className="w-full max-w-md">
-            {/* MOBILE BRAND */}
-            <Link to="/" className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
-                <UserPlus size={21} />
-              </div>
+          <div className="w-full max-w-xl">
+            {/* Mobile Logo */}
 
-              <div>
-                <p className="font-bold text-slate-900">CampusMart AI</p>
+            <div className="mb-8 flex justify-center lg:hidden">
+              <Link to="/" className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950">
+                  <Store size={22} className="text-white" />
+                </div>
 
-                <p className="text-xs text-slate-500">Campus Marketplace</p>
-              </div>
-            </Link>
+                <div>
+                  <p className="text-lg font-extrabold text-slate-950">
+                    CampusMart
+                    <span className="text-blue-600">AI</span>
+                  </p>
+
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Campus Marketplace
+                  </p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Heading */}
 
             <div>
-              <h2 className="text-3xl font-bold text-slate-900">
+              <p className="text-sm font-bold text-blue-600">Join CampusMart</p>
+
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">
                 Create your account
               </h2>
 
-              <p className="mt-2 text-sm text-slate-500">
-                Join your campus marketplace in a few steps.
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                Set up your student profile and start using your campus
+                marketplace.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {/* NAME */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Full Name
-                </label>
+            {/* Form */}
 
-                <div className="relative">
-                  <User
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
+            <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Name */}
+
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-2 block text-sm font-bold text-slate-800"
+                  >
+                    Full name
+                  </label>
+
+                  <div className="relative">
+                    <User
+                      size={17}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Your full name"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Student ID */}
+
+                <div>
+                  <label
+                    htmlFor="studentId"
+                    className="mb-2 block text-sm font-bold text-slate-800"
+                  >
+                    Student ID
+                  </label>
 
                   <input
+                    id="studentId"
+                    name="studentId"
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    value={formData.studentId}
                     onChange={handleChange}
-                    placeholder="Enter your full name"
-                    required
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    placeholder="College student ID"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                   />
                 </div>
               </div>
 
-              {/* EMAIL */}
+              {/* Email */}
+
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Email Address
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-bold text-slate-800"
+                >
+                  Email address
                 </label>
 
                 <div className="relative">
                   <Mail
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={17}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   />
 
                   <input
-                    type="email"
+                    id="email"
                     name="email"
+                    type="email"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="Enter your email"
-                    required
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    placeholder="you@example.com"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                   />
                 </div>
               </div>
 
-              {/* STUDENT ID */}
+              {/* College */}
+
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Student ID
+                <label
+                  htmlFor="college"
+                  className="mb-2 block text-sm font-bold text-slate-800"
+                >
+                  College
                 </label>
 
-                <div className="relative">
-                  <BadgeCheck
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    type="text"
-                    name="studentId"
-                    value={formData.studentId}
-                    onChange={handleChange}
-                    placeholder="Enter your student ID"
-                    required
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                  />
-                </div>
-
-                <p className="mt-2 text-xs text-slate-400">
-                  Your student ID will be used for campus verification.
-                </p>
-              </div>
-
-              {/* PASSWORD */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Create a password"
-                    required
-                    minLength={6}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                  >
-                    {showPassword ?
-                      <EyeOff size={18} />
-                    : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* CONFIRM PASSWORD */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Confirm Password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm your password"
-                    required
-                    minLength={6}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                  >
-                    {showConfirmPassword ?
-                      <EyeOff size={18} />
-                    : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* TERMS */}
-              <label className="flex cursor-pointer items-start gap-3">
                 <input
-                  type="checkbox"
-                  required
-                  className="mt-1 h-4 w-4 rounded border-slate-300 accent-blue-600"
+                  id="college"
+                  name="college"
+                  type="text"
+                  value={formData.college}
+                  onChange={handleChange}
+                  placeholder="Your college"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
                 />
+              </div>
 
-                <span className="text-xs leading-5 text-slate-500">
-                  I agree to the CampusMart terms and understand that my student
-                  account will be verified.
-                </span>
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Location */}
 
-              {/* SUBMIT */}
+                <div>
+                  <label
+                    htmlFor="location"
+                    className="mb-2 block text-sm font-bold text-slate-800"
+                  >
+                    Campus / Location
+                  </label>
+
+                  <div className="relative">
+                    <MapPin
+                      size={17}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      id="location"
+                      name="location"
+                      type="text"
+                      value={formData.location}
+                      onChange={handleChange}
+                      placeholder="Campus location"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="mb-2 block text-sm font-bold text-slate-800"
+                  >
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <LockKeyhole
+                      size={17}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Minimum 6 characters"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-11 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((previous) => !previous)}
+                      className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+                    >
+                      {showPassword ?
+                        <EyeOff size={16} />
+                      : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error */}
+
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-5 text-red-700">
+                  {error}
+                </div>
+              )}
+
+              {/* Success */}
+
+              {success && (
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold leading-5 text-green-700">
+                  {success}
+                </div>
+              )}
+
+              {/* Terms */}
+
+              <p className="text-xs leading-5 text-slate-400">
+                By creating an account, you agree to use CampusMart responsibly
+                and follow your campus marketplace guidelines.
+              </p>
+
+              {/* Submit */}
+
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 font-semibold text-white transition hover:bg-blue-700"
+                disabled={loading}
+                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-600 hover:shadow-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create Account
-                <ArrowRight size={18} />
+                {loading ?
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Creating account...
+                  </>
+                : <>
+                    Create account
+                    <ArrowRight
+                      size={17}
+                      className="transition group-hover:translate-x-0.5"
+                    />
+                  </>
+                }
               </button>
             </form>
 
-            {/* LOGIN */}
-            <p className="mt-7 text-center text-sm text-slate-500">
+            {/* Login */}
+
+            <div className="mt-6 text-center text-sm text-slate-500">
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-bold text-blue-600 transition hover:text-blue-700"
               >
                 Sign in
               </Link>
-            </p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-slate-400">
+              <ShieldCheck size={14} />
+              Your student account is securely authenticated
+            </div>
           </div>
         </div>
       </div>

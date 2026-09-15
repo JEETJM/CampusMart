@@ -1,8 +1,11 @@
 const Product = require("../models/Product");
 
-// ==============================
-// CREATE PRODUCT
-// ==============================
+/*
+|--------------------------------------------------------------------------
+| Create Product
+|--------------------------------------------------------------------------
+*/
+
 const createProduct = async (req, res) => {
   try {
     const {
@@ -14,80 +17,134 @@ const createProduct = async (req, res) => {
       listingType,
       images,
       location,
+      college,
     } = req.body;
 
-    if (!title || !description || !category || price === undefined) {
-      return res.status(400).json({
+    /*
+    |--------------------------------------------------------------------------
+    | Check authenticated user
+    |--------------------------------------------------------------------------
+    */
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
         success: false,
-        message: "Please fill all required product fields.",
+        message: "User authentication required.",
       });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Required fields
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      !title ||
+      !description ||
+      !category ||
+      price === undefined ||
+      price === null
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Title, description, category and price are required.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create Product
+    |--------------------------------------------------------------------------
+    */
 
     const product = await Product.create({
       title: title.trim(),
       description: description.trim(),
       category,
-      price,
-      condition,
-      listingType,
-      images: images || [],
+      price: Number(price),
+      condition: condition || "Good",
+      listingType: listingType || "Sell",
+      images: Array.isArray(images) ? images : [],
       location: location || "",
-      seller: req.user.userId,
-      college: "Narula Institute of Technology",
+      
+      // IMPORTANT
+      seller: req.user._id,
+
+      college:
+        college ||
+        req.user.college ||
+        "Narula Institute of Technology",
+
+      isAvailable: true,
     });
 
-    return res.status(201).json({
+    /*
+    |--------------------------------------------------------------------------
+    | Populate seller
+    |--------------------------------------------------------------------------
+    */
+
+    await product.populate(
+      "seller",
+      "name email studentId college isVerified",
+    );
+
+    res.status(201).json({
       success: true,
-      message: "Product listed successfully.",
+      message: "Product created successfully.",
       product,
     });
   } catch (error) {
     console.error("Create Product Error:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while creating product.",
+      message: "Unable to create product.",
     });
   }
 };
 
-// ==============================
-// GET ALL PRODUCTS
-// SEARCH + FILTER + PAGINATION
-// ==============================
+/*
+|--------------------------------------------------------------------------
+| Get All Products
+|--------------------------------------------------------------------------
+*/
+
 const getProducts = async (req, res) => {
   try {
     const {
       page = 1,
       limit = 12,
       search = "",
-      category = "",
-      condition = "",
-      listingType = "",
-      minPrice = "",
-      maxPrice = "",
+      category,
+      condition,
+      listingType,
+      minPrice,
+      maxPrice,
       sort = "newest",
     } = req.query;
 
-    // ==============================
-    // PAGINATION
-    // ==============================
-    const currentPage = Math.max(parseInt(page) || 1, 1);
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const currentLimit = Math.min(
+      Math.max(Number(limit) || 12, 1),
+      100,
+    );
 
-    const productsPerPage = Math.min(Math.max(parseInt(limit) || 12, 1), 50);
+    const skip =
+      (currentPage - 1) * currentLimit;
 
-    const skip = (currentPage - 1) * productsPerPage;
+    /*
+    |--------------------------------------------------------------------------
+    | Filters
+    |--------------------------------------------------------------------------
+    */
 
-    // ==============================
-    // BASE FILTER
-    // ==============================
     const filter = {
       isAvailable: true,
     };
 
-    // ==============================
-    // SEARCH
-    // ==============================
     if (search.trim()) {
       filter.$or = [
         {
@@ -102,67 +159,47 @@ const getProducts = async (req, res) => {
             $options: "i",
           },
         },
-        {
-          category: {
-            $regex: search.trim(),
-            $options: "i",
-          },
-        },
       ];
     }
 
-    // ==============================
-    // CATEGORY FILTER
-    // ==============================
-    if (category.trim()) {
-      filter.category = category.trim();
+    if (category) {
+      filter.category = category;
     }
 
-    // ==============================
-    // CONDITION FILTER
-    // ==============================
-    if (condition.trim()) {
-      filter.condition = condition.trim();
+    if (condition) {
+      filter.condition = condition;
     }
 
-    // ==============================
-    // LISTING TYPE FILTER
-    // ==============================
-    if (listingType.trim()) {
-      filter.listingType = listingType.trim();
+    if (listingType) {
+      filter.listingType = listingType;
     }
 
-    // ==============================
-    // PRICE FILTER
-    // ==============================
-    if (minPrice !== "" || maxPrice !== "") {
-      filter.price = {};
-
-      if (minPrice !== "") {
-        const minimum = Number(minPrice);
-
-        if (!Number.isNaN(minimum)) {
-          filter.price.$gte = minimum;
-        }
-      }
-
-      if (maxPrice !== "") {
-        const maximum = Number(maxPrice);
-
-        if (!Number.isNaN(maximum)) {
-          filter.price.$lte = maximum;
-        }
-      }
-
-      // Remove empty price object
-      if (Object.keys(filter.price).length === 0) {
-        delete filter.price;
-      }
+    if (
+      minPrice !== undefined &&
+      minPrice !== ""
+    ) {
+      filter.price = {
+        ...(filter.price || {}),
+        $gte: Number(minPrice),
+      };
     }
 
-    // ==============================
-    // SORTING
-    // ==============================
+    if (
+      maxPrice !== undefined &&
+      maxPrice !== ""
+    ) {
+      filter.price = {
+        ...(filter.price || {}),
+        $lte: Number(maxPrice),
+      };
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sorting
+    |--------------------------------------------------------------------------
+    */
+
     let sortOption = {
       createdAt: -1,
     };
@@ -188,62 +225,72 @@ const getProducts = async (req, res) => {
     if (sort === "popular") {
       sortOption = {
         views: -1,
+        wishlistCount: -1,
       };
     }
 
-    // ==============================
-    // FETCH PRODUCTS
-    // ==============================
-    const [products, totalProducts] = await Promise.all([
-      Product.find(filter)
-        .populate("seller", "name email studentId college isVerified")
-        .sort(sortOption)
-        .skip(skip)
-        .limit(productsPerPage),
+    /*
+    |--------------------------------------------------------------------------
+    | Fetch Products
+    |--------------------------------------------------------------------------
+    */
 
-      Product.countDocuments(filter),
-    ]);
+    const [products, totalProducts] =
+      await Promise.all([
+        Product.find(filter)
+          .populate(
+            "seller",
+            "name email studentId college isVerified",
+          )
+          .sort(sortOption)
+          .skip(skip)
+          .limit(currentLimit),
 
-    // ==============================
-    // PAGINATION INFO
-    // ==============================
-    const totalPages = Math.ceil(totalProducts / productsPerPage);
+        Product.countDocuments(filter),
+      ]);
 
-    return res.status(200).json({
+    const totalPages = Math.ceil(
+      totalProducts / currentLimit,
+    );
+
+    res.status(200).json({
       success: true,
-
-      count: products.length,
-
       products,
-
       pagination: {
-        totalProducts,
-        totalPages,
         currentPage,
-        productsPerPage,
-        hasNextPage: currentPage < totalPages,
-        hasPreviousPage: currentPage > 1,
+        totalPages,
+        totalProducts,
+        limit: currentLimit,
       },
     });
   } catch (error) {
-    console.error("Get Products Error:", error);
+    console.error(
+      "Get Products Error:",
+      error,
+    );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while fetching products.",
+      message: "Unable to fetch products.",
     });
   }
 };
 
-// ==============================
-// GET SINGLE PRODUCT
-// ==============================
+/*
+|--------------------------------------------------------------------------
+| Get Single Product
+|--------------------------------------------------------------------------
+*/
+
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate(
-      "seller",
-      "name email studentId college isVerified",
-    );
+    const { id } = req.params;
+
+    const product = await Product.findById(id)
+      .populate(
+        "seller",
+        "name email studentId college isVerified",
+      );
 
     if (!product) {
       return res.status(404).json({
@@ -252,53 +299,94 @@ const getProductById = async (req, res) => {
       });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Increase views
+    |--------------------------------------------------------------------------
+    */
+
     product.views += 1;
+
     await product.save();
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       product,
     });
   } catch (error) {
-    console.error("Get Product Error:", error);
+    console.error(
+      "Get Product By ID Error:",
+      error,
+    );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while fetching product.",
+      message: "Unable to fetch product.",
     });
   }
 };
 
-// ==============================
-// GET MY PRODUCTS
-// ==============================
+/*
+|--------------------------------------------------------------------------
+| Get My Products
+|--------------------------------------------------------------------------
+*/
+
 const getMyProducts = async (req, res) => {
   try {
-    const products = await Product.find({
-      seller: req.user.userId,
-    }).sort({ createdAt: -1 });
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
 
-    return res.status(200).json({
+    const products = await Product.find({
+      seller: req.user._id,
+    })
+      .populate(
+        "seller",
+        "name email studentId college isVerified",
+      )
+      .sort({
+        createdAt: -1,
+      });
+
+    res.status(200).json({
       success: true,
-      count: products.length,
       products,
     });
   } catch (error) {
-    console.error("Get My Products Error:", error);
+    console.error(
+      "Get My Products Error:",
+      error,
+    );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while fetching your products.",
+      message: "Unable to fetch your products.",
     });
   }
 };
 
-// ==============================
-// DELETE PRODUCT
-// ==============================
+/*
+|--------------------------------------------------------------------------
+| Delete Product
+|--------------------------------------------------------------------------
+*/
+
 const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
+
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({
@@ -307,25 +395,38 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    if (product.seller.toString() !== req.user.userId.toString()) {
+    /*
+    |--------------------------------------------------------------------------
+    | Only seller can delete own product
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      product.seller.toString() !==
+      req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You can only delete your own products.",
+        message:
+          "You are not authorized to delete this product.",
       });
     }
 
-    await product.deleteOne();
+    await Product.findByIdAndDelete(id);
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Product deleted successfully.",
     });
   } catch (error) {
-    console.error("Delete Product Error:", error);
+    console.error(
+      "Delete Product Error:",
+      error,
+    );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while deleting product.",
+      message: "Unable to delete product.",
     });
   }
 };

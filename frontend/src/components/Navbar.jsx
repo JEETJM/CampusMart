@@ -1,298 +1,502 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+
 import {
-  Bell,
+  ArrowRight,
+  ChevronDown,
   Heart,
   LogIn,
   LogOut,
   Menu,
+  MessageCircle,
+  Package,
   Search,
   ShoppingCart,
+  Store,
   User,
   X,
 } from "lucide-react";
 
-const Navbar = () => {
+function Navbar() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
-  const loadUser = () => {
-    try {
-      const storedUser = localStorage.getItem("campusmart_user");
-      const token = localStorage.getItem("campusmart_token");
+  const profileRef = useRef(null);
 
-      if (token && storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error("Navbar User Error:", error);
-      setUser(null);
-    }
-  };
+  const token = localStorage.getItem("campusmart_token");
+
+  const storedUser = localStorage.getItem("campusmart_user");
+
+  let user = null;
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    user = null;
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Close profile dropdown when clicking outside
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
-    loadUser();
-
-    const handleStorageChange = () => {
-      loadUser();
+    const handleOutsideClick = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
     };
 
-    const handleAuthChange = () => {
-      loadUser();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("campusmart-auth-change", handleAuthChange);
+    document.addEventListener("mousedown", handleOutsideClick);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("campusmart-auth-change", handleAuthChange);
+      document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Search
+  |--------------------------------------------------------------------------
+  */
+
+  const handleSearch = (event) => {
+    event.preventDefault();
+
+    const query = searchValue.trim();
+
+    if (!query) {
+      navigate("/marketplace");
+      return;
+    }
+
+    navigate(`/marketplace?search=${encodeURIComponent(query)}`);
+
+    setSearchValue("");
+    setIsMenuOpen(false);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Logout
+  |--------------------------------------------------------------------------
+  */
 
   const handleLogout = () => {
     localStorage.removeItem("campusmart_token");
     localStorage.removeItem("campusmart_user");
 
-    setUser(null);
-    setCartCount(0);
-    setMobileOpen(false);
+    setIsProfileOpen(false);
+    setIsMenuOpen(false);
 
-    window.dispatchEvent(new Event("campusmart-auth-change"));
-
-    navigate("/login", { replace: true });
+    navigate("/login", {
+      replace: true,
+    });
   };
 
-  const navItems = [
-    {
-      name: "Marketplace",
-      path: "/marketplace",
-    },
-    {
-      name: "Sell",
-      path: "/sell",
-    },
-  ];
+  /*
+  |--------------------------------------------------------------------------
+  | Navigation Link
+  |--------------------------------------------------------------------------
+  */
 
-  const getInitials = (name = "") => {
-    return name
-      .trim()
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word[0]?.toUpperCase())
-      .join("");
-  };
+  const navLinkClass = ({ isActive }) =>
+    `relative flex items-center px-1 py-2 text-sm font-semibold transition ${
+      isActive ? "text-blue-600" : "text-slate-600 hover:text-slate-950"
+    }`;
+
+  const mobileLinkClass = ({ isActive }) =>
+    `flex items-center rounded-xl px-4 py-3 text-sm font-semibold transition ${
+      isActive ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"
+    }`;
+
+  const displayName = user?.name || user?.fullName || "Student";
+
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-3"
-          onClick={() => setMobileOpen(false)}
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm">
-            CM
-          </div>
+    <>
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="flex h-[76px] items-center justify-between gap-5">
+            {/* ========================================================= */}
+            {/* BRAND                                                      */}
+            {/* ========================================================= */}
 
-          <div className="hidden sm:block">
-            <p className="text-base font-bold tracking-tight text-slate-900">
-              CampusMart
-            </p>
-
-            <p className="text-[11px] font-medium text-blue-600">
-              AI Marketplace
-            </p>
-          </div>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 md:flex">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  isActive ?
-                    "bg-slate-100 text-slate-900"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`
-              }
+            <Link
+              to="/"
+              className="group flex shrink-0 items-center gap-3"
+              onClick={() => setIsMenuOpen(false)}
             >
-              {item.name}
-            </NavLink>
-          ))}
-        </nav>
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 shadow-lg shadow-slate-200 transition duration-300 group-hover:-translate-y-0.5">
+                <Store size={20} strokeWidth={2.2} className="text-white" />
 
-        {/* Desktop Actions */}
-        <div className="hidden items-center gap-2 md:flex">
-          <button
-            onClick={() => navigate("/marketplace")}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-            title="Search Marketplace"
-          >
-            <Search size={19} />
-          </button>
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-blue-600" />
+              </div>
 
-          {user ?
-            <>
-              <button
-                onClick={() => navigate("/wishlist")}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                title="Wishlist"
-              >
-                <Heart size={19} />
-              </button>
+              <div className="hidden sm:block">
+                <p className="text-[17px] font-extrabold tracking-tight text-slate-950">
+                  CampusMart
+                  <span className="text-blue-600">AI</span>
+                </p>
 
-              <button
-                onClick={() => navigate("/cart")}
-                className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                title="Cart"
-              >
-                <ShoppingCart size={19} />
-
-                {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => navigate("/profile")}
-                className="ml-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">
-                  {getInitials(user?.name || user?.fullName || "ST") || "ST"}
-                </div>
-
-                <div className="hidden lg:block text-left">
-                  <p className="max-w-28 truncate text-xs font-semibold text-slate-900">
-                    {user?.name || user?.fullName || "Student"}
-                  </p>
-
-                  <p className="text-[10px] text-slate-500">View Profile</p>
-                </div>
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
-                title="Logout"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          : <Link
-              to="/login"
-              className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              <LogIn size={17} />
-              Login
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Campus Marketplace
+                </p>
+              </div>
             </Link>
-          }
-        </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 md:hidden"
-        >
-          {mobileOpen ?
-            <X size={22} />
-          : <Menu size={22} />}
-        </button>
-      </div>
+            {/* ========================================================= */}
+            {/* DESKTOP NAVIGATION                                         */}
+            {/* ========================================================= */}
 
-      {/* Mobile Menu */}
-      {mobileOpen && (
-        <div className="border-t border-slate-200 bg-white md:hidden">
-          <div className="mx-auto max-w-7xl space-y-1 px-4 py-4 sm:px-6">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `block rounded-lg px-4 py-3 text-sm font-medium ${
-                    isActive ?
-                      "bg-slate-100 text-slate-900"
-                    : "text-slate-600 hover:bg-slate-50"
-                  }`
-                }
-              >
-                {item.name}
+            <nav className="hidden items-center gap-7 lg:flex">
+              <NavLink to="/" className={navLinkClass}>
+                Home
               </NavLink>
-            ))}
 
-            <NavLink
-              to="/marketplace"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              <NavLink to="/marketplace" className={navLinkClass}>
+                Marketplace
+              </NavLink>
+
+              <NavLink to="/sell" className={navLinkClass}>
+                Sell
+              </NavLink>
+
+              {token && (
+                <NavLink to="/chat" className={navLinkClass}>
+                  Messages
+                </NavLink>
+              )}
+            </nav>
+
+            {/* ========================================================= */}
+            {/* SEARCH                                                      */}
+            {/* ========================================================= */}
+
+            <form
+              onSubmit={handleSearch}
+              className="hidden max-w-md flex-1 md:flex"
             >
-              <Search size={18} />
-              Search Marketplace
-            </NavLink>
+              <div className="relative w-full">
+                <Search
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
 
-            {user ?
-              <>
-                <NavLink
-                  to="/profile"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  <User size={18} />
-                  Profile
-                </NavLink>
+                <input
+                  type="search"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Search books, electronics, cycles..."
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
+            </form>
 
-                <NavLink
+            {/* ========================================================= */}
+            {/* RIGHT ACTIONS                                               */}
+            {/* ========================================================= */}
+
+            <div className="flex items-center gap-1.5">
+              {/* Wishlist */}
+
+              {token && (
+                <Link
                   to="/wishlist"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="hidden h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 sm:flex"
+                  title="Wishlist"
                 >
-                  <Heart size={18} />
-                  Wishlist
+                  <Heart size={19} />
+                </Link>
+              )}
+
+              {/* Cart */}
+
+              {token && (
+                <Link
+                  to="/cart"
+                  className="relative hidden h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 sm:flex"
+                  title="Cart"
+                >
+                  <ShoppingCart size={19} />
+                </Link>
+              )}
+
+              {/* Auth */}
+
+              {!token ?
+                <div className="ml-1 hidden items-center gap-2 sm:flex">
+                  <Link
+                    to="/login"
+                    className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+                  >
+                    <LogIn size={17} />
+                    Sign in
+                  </Link>
+
+                  <Link
+                    to="/register"
+                    className="group inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-100"
+                  >
+                    Create account
+                    <ArrowRight
+                      size={16}
+                      className="transition group-hover:translate-x-0.5"
+                    />
+                  </Link>
+                </div>
+              : /* ======================================================= */
+                /* PROFILE DROPDOWN                                        */
+                /* ======================================================= */
+
+                <div ref={profileRef} className="relative ml-1 hidden sm:block">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileOpen((previous) => !previous)}
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:border-slate-300 hover:shadow-sm"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+                      {initial}
+                    </div>
+
+                    <div className="hidden max-w-[100px] text-left xl:block">
+                      <p className="truncate text-xs font-bold text-slate-900">
+                        {displayName}
+                      </p>
+
+                      <p className="text-[10px] font-medium text-slate-400">
+                        Student
+                      </p>
+                    </div>
+
+                    <ChevronDown
+                      size={15}
+                      className={`text-slate-400 transition ${
+                        isProfileOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className="absolute right-0 top-[calc(100%+10px)] w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/70">
+                      <div className="mb-2 rounded-xl bg-slate-50 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold text-white">
+                            {initial}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-slate-900">
+                              {displayName}
+                            </p>
+
+                            <p className="truncate text-xs text-slate-500">
+                              {user?.email || "Student account"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <User size={17} />
+                        My Profile
+                      </Link>
+
+                      <Link
+                        to="/my-listings"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <Package size={17} />
+                        My Listings
+                      </Link>
+
+                      <Link
+                        to="/orders"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <ShoppingCart size={17} />
+                        My Orders
+                      </Link>
+
+                      <Link
+                        to="/chat"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <MessageCircle size={17} />
+                        Messages
+                      </Link>
+
+                      <div className="my-2 border-t border-slate-100" />
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      >
+                        <LogOut size={17} />
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+
+              {/* Mobile Menu */}
+
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen((previous) => !previous)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-50 lg:hidden"
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ?
+                  <X size={20} />
+                : <Menu size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {/* =========================================================== */}
+          {/* MOBILE MENU                                                  */}
+          {/* =========================================================== */}
+
+          {isMenuOpen && (
+            <div className="border-t border-slate-100 pb-5 pt-4 lg:hidden">
+              {/* Mobile Search */}
+
+              <form onSubmit={handleSearch} className="mb-4">
+                <div className="relative">
+                  <Search
+                    size={18}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type="search"
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    placeholder="Search products..."
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+                </div>
+              </form>
+
+              <nav className="grid gap-1">
+                <NavLink
+                  to="/"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={mobileLinkClass}
+                >
+                  Home
                 </NavLink>
 
                 <NavLink
-                  to="/cart"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  to="/marketplace"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={mobileLinkClass}
                 >
-                  <ShoppingCart size={18} />
-                  Cart
+                  Marketplace
                 </NavLink>
 
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                <NavLink
+                  to="/sell"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={mobileLinkClass}
                 >
-                  <LogOut size={18} />
-                  Logout
-                </button>
-              </>
-            : <Link
-                to="/login"
-                onClick={() => setMobileOpen(false)}
-                className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
-              >
-                <LogIn size={17} />
-                Login
-              </Link>
-            }
-          </div>
+                  Sell Product
+                </NavLink>
+
+                {token && (
+                  <>
+                    <NavLink
+                      to="/wishlist"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={mobileLinkClass}
+                    >
+                      Wishlist
+                    </NavLink>
+
+                    <NavLink
+                      to="/cart"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={mobileLinkClass}
+                    >
+                      Cart
+                    </NavLink>
+
+                    <NavLink
+                      to="/orders"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={mobileLinkClass}
+                    >
+                      My Orders
+                    </NavLink>
+
+                    <NavLink
+                      to="/chat"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={mobileLinkClass}
+                    >
+                      Messages
+                    </NavLink>
+
+                    <NavLink
+                      to="/profile"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={mobileLinkClass}
+                    >
+                      My Profile
+                    </NavLink>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mt-1 flex items-center rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                    >
+                      <LogOut size={17} className="mr-3" />
+                      Sign out
+                    </button>
+                  </>
+                )}
+
+                {!token && (
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+                    <Link
+                      to="/login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex h-11 items-center justify-center rounded-xl border border-slate-200 text-sm font-bold text-slate-700"
+                    >
+                      Sign in
+                    </Link>
+
+                    <Link
+                      to="/register"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex h-11 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white"
+                    >
+                      Create account
+                    </Link>
+                  </div>
+                )}
+              </nav>
+            </div>
+          )}
         </div>
-      )}
-    </header>
+      </header>
+    </>
   );
-};
+}
 
 export default Navbar;

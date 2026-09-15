@@ -7,28 +7,41 @@ const {
   forgotPassword,
   verifyResetOTP,
   resetPassword,
+  updateProfile,
 } = require("../controllers/authController");
 
 const protect = require("../middleware/authMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
 // ===============================
-// AUTH ROUTES
+// REGISTER
 // ===============================
-
 router.post("/register", registerUser);
 
+// ===============================
+// LOGIN
+// ===============================
 router.post("/login", loginUser);
 
-// Current logged-in user
+// ===============================
+// CURRENT USER
+// ===============================
 router.get("/me", protect, getMe);
 
-// Password reset
+// ===============================
+// PASSWORD RESET
+// ===============================
 router.post("/forgot-password", forgotPassword);
 
 router.post("/verify-reset-otp", verifyResetOTP);
 
 router.post("/reset-password", resetPassword);
+
+// ===============================
+// UPDATE PROFILE
+// ===============================
+router.put("/profile", protect, upload.single("profileImage"), updateProfile);
 
 module.exports = router;

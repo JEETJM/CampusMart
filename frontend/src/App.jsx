@@ -17,8 +17,12 @@ import NotFound from "./pages/NotFound";
 import Checkout from "./pages/Checkout";
 import MyListings from "./pages/MyListings";
 import MyOrders from "./pages/MyOrders";
+import SellerOrders from "./pages/SellerOrders";
 import OrderDetails from "./pages/OrderDetails";
 import Chat from "./pages/Chat";
+import EditProfile from "./pages/EditProfile";
+import MyExchangeOffers from "./pages/MyExchangeOffers";
+import ExchangeOffers from "./pages/ExchangeOffers";
 function App() {
   return (
     <div className="app">
@@ -38,14 +42,23 @@ function App() {
 
           <Route path="/register" element={<Register />} />
 
+          {/* <Route path="/profile" element={<Profile />} /> */}
+
           <Route path="/profile" element={<Profile />} />
+
+          <Route path="/profile/edit" element={<EditProfile />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/seller-orders" element={<SellerOrders />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/my-listings" element={<MyListings />} />
+
+          <Route path="/my-exchange-offers" element={<MyExchangeOffers />} />
+
+          <Route path="/exchange-offers" element={<ExchangeOffers />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route path="*" element={<NotFound />} />

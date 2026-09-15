@@ -233,6 +233,134 @@ const getOrderById = async (req, res) => {
     });
   }
 };
+const getSellerOrders = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+
+    const orders = await Order.find({
+      "items.seller": sellerId,
+    })
+      .populate("buyer", "name email studentId college")
+      .populate("items.product", "title images price")
+      .sort({ createdAt: -1 });
+
+    const sellerOrders = orders
+      .map((order) => {
+        const sellerItems = order.items.filter(
+          (item) =>
+            item.seller && item.seller.toString() === sellerId.toString(),
+        );
+
+        if (sellerItems.length === 0) {
+          return null;
+        }
+
+        const sellerSubtotal = sellerItems.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0,
+        );
+
+        return {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          buyer: order.buyer,
+          items: sellerItems,
+          subtotal: sellerSubtotal,
+          pickupLocation: order.pickupLocation,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          orderStatus: order.orderStatus,
+          notes: order.notes,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        };
+      })
+      .filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      orders: sellerOrders,
+    });
+  } catch (error) {
+    console.error("Get Seller Orders Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to fetch seller orders.",
+    });
+  }
+};
+
+const updateSellerOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orderStatus } = req.body;
+
+    const allowedStatuses = [
+      "Confirmed",
+      "Ready for Pickup",
+      "Completed",
+      "Cancelled",
+    ];
+
+    if (!allowedStatuses.includes(orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status.",
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    const sellerId = req.user._id.toString();
+
+    const sellerOwnsProduct = order.items.some(
+      (item) => item.seller && item.seller.toString() === sellerId,
+    );
+
+    if (!sellerOwnsProduct) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to update this order.",
+      });
+    }
+
+    if (order.orderStatus === "Cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled orders cannot be updated.",
+      });
+    }
+
+    order.orderStatus = orderStatus;
+
+    await order.save();
+
+    await order.populate("buyer", "name email studentId college");
+
+    await order.populate("items.product", "title images price");
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully.",
+      order,
+    });
+  } catch (error) {
+    console.error("Update Seller Order Status Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to update order status.",
+    });
+  }
+};
 
 // ===============================
 // CANCEL ORDER
@@ -293,4 +421,6 @@ module.exports = {
   getMyOrders,
   getOrderById,
   cancelOrder,
+  getSellerOrders,
+  updateSellerOrderStatus,
 };

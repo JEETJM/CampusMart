@@ -12,25 +12,22 @@ const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-
-// ==============================
-// PUBLIC ROUTES
-// ==============================
-
 router.get("/", getProducts);
-
-
-// ==============================
-// PROTECTED ROUTES
-// ==============================
 
 router.post("/", protect, createProduct);
 
-router.get("/my/listings", protect, getMyProducts);
+router.get(
+  "/my/listings",
+  protect,
+  getMyProducts,
+);
 
 router.get("/:id", getProductById);
 
-router.delete("/:id", protect, deleteProduct);
-
+router.delete(
+  "/:id",
+  protect,
+  deleteProduct,
+);
 
 module.exports = router;
