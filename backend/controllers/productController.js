@@ -18,7 +18,7 @@ const createProduct = async (req, res) => {
       images,
       location,
       college,
-    } = req.body;
+    } = req.body || {};
 
     /*
     |--------------------------------------------------------------------------
@@ -48,8 +48,22 @@ const createProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Title, description, category and price are required.",
+        message: "Title, description, category and price are required.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate price
+    |--------------------------------------------------------------------------
+    */
+
+    const numericPrice = Number(price);
+
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid product price.",
       });
     }
 
@@ -60,22 +74,25 @@ const createProduct = async (req, res) => {
     */
 
     const product = await Product.create({
-      title: title.trim(),
-      description: description.trim(),
+      title: String(title).trim(),
+
+      description: String(description).trim(),
+
       category,
-      price: Number(price),
+
+      price: numericPrice,
+
       condition: condition || "Good",
+
       listingType: listingType || "Sell",
+
       images: Array.isArray(images) ? images : [],
-      location: location || "",
-      
-      // IMPORTANT
+
+      location: location ? String(location).trim() : "",
+
       seller: req.user._id,
 
-      college:
-        college ||
-        req.user.college ||
-        "Narula Institute of Technology",
+      college: college || req.user.college || "Narula Institute of Technology",
 
       isAvailable: true,
     });
@@ -86,12 +103,9 @@ const createProduct = async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    await product.populate(
-      "seller",
-      "name email studentId college isVerified",
-    );
+    await product.populate("seller", "name email studentId college isVerified");
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Product created successfully.",
       product,
@@ -99,7 +113,7 @@ const createProduct = async (req, res) => {
   } catch (error) {
     console.error("Create Product Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to create product.",
     });
@@ -124,16 +138,13 @@ const getProducts = async (req, res) => {
       minPrice,
       maxPrice,
       sort = "newest",
-    } = req.query;
+    } = req.query || {};
 
     const currentPage = Math.max(Number(page) || 1, 1);
-    const currentLimit = Math.min(
-      Math.max(Number(limit) || 12, 1),
-      100,
-    );
 
-    const skip =
-      (currentPage - 1) * currentLimit;
+    const currentLimit = Math.min(Math.max(Number(limit) || 12, 1), 100);
+
+    const skip = (currentPage - 1) * currentLimit;
 
     /*
     |--------------------------------------------------------------------------
@@ -145,17 +156,19 @@ const getProducts = async (req, res) => {
       isAvailable: true,
     };
 
-    if (search.trim()) {
+    const cleanSearch = String(search || "").trim();
+
+    if (cleanSearch) {
       filter.$or = [
         {
           title: {
-            $regex: search.trim(),
+            $regex: cleanSearch,
             $options: "i",
           },
         },
         {
           description: {
-            $regex: search.trim(),
+            $regex: cleanSearch,
             $options: "i",
           },
         },
@@ -174,23 +187,35 @@ const getProducts = async (req, res) => {
       filter.listingType = listingType;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Price Filter
+    |--------------------------------------------------------------------------
+    */
+
+    const minimumPrice = Number(minPrice);
+
+    const maximumPrice = Number(maxPrice);
+
     if (
       minPrice !== undefined &&
-      minPrice !== ""
+      minPrice !== "" &&
+      Number.isFinite(minimumPrice)
     ) {
       filter.price = {
         ...(filter.price || {}),
-        $gte: Number(minPrice),
+        $gte: minimumPrice,
       };
     }
 
     if (
       maxPrice !== undefined &&
-      maxPrice !== ""
+      maxPrice !== "" &&
+      Number.isFinite(maximumPrice)
     ) {
       filter.price = {
         ...(filter.price || {}),
-        $lte: Number(maxPrice),
+        $lte: maximumPrice,
       };
     }
 
@@ -235,27 +260,22 @@ const getProducts = async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    const [products, totalProducts] =
-      await Promise.all([
-        Product.find(filter)
-          .populate(
-            "seller",
-            "name email studentId college isVerified",
-          )
-          .sort(sortOption)
-          .skip(skip)
-          .limit(currentLimit),
+    const [products, totalProducts] = await Promise.all([
+      Product.find(filter)
+        .populate("seller", "name email studentId college isVerified")
+        .sort(sortOption)
+        .skip(skip)
+        .limit(currentLimit),
 
-        Product.countDocuments(filter),
-      ]);
+      Product.countDocuments(filter),
+    ]);
 
-    const totalPages = Math.ceil(
-      totalProducts / currentLimit,
-    );
+    const totalPages = Math.ceil(totalProducts / currentLimit);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       products,
+
       pagination: {
         currentPage,
         totalPages,
@@ -264,12 +284,9 @@ const getProducts = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "Get Products Error:",
-      error,
-    );
+    console.error("Get Products Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to fetch products.",
     });
@@ -286,11 +303,10 @@ const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id)
-      .populate(
-        "seller",
-        "name email studentId college isVerified",
-      );
+    const product = await Product.findById(id).populate(
+      "seller",
+      "name email studentId college isVerified",
+    );
 
     if (!product) {
       return res.status(404).json({
@@ -305,21 +321,18 @@ const getProductById = async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    product.views += 1;
+    product.views = (product.views || 0) + 1;
 
     await product.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       product,
     });
   } catch (error) {
-    console.error(
-      "Get Product By ID Error:",
-      error,
-    );
+    console.error("Get Product By ID Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to fetch product.",
     });
@@ -344,25 +357,19 @@ const getMyProducts = async (req, res) => {
     const products = await Product.find({
       seller: req.user._id,
     })
-      .populate(
-        "seller",
-        "name email studentId college isVerified",
-      )
+      .populate("seller", "name email studentId college isVerified")
       .sort({
         createdAt: -1,
       });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       products,
     });
   } catch (error) {
-    console.error(
-      "Get My Products Error:",
-      error,
-    );
+    console.error("Get My Products Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to fetch your products.",
     });
@@ -379,12 +386,24 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication
+    |--------------------------------------------------------------------------
+    */
+
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
         message: "Authentication required.",
       });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Find Product
+    |--------------------------------------------------------------------------
+    */
 
     const product = await Product.findById(id);
 
@@ -397,39 +416,44 @@ const deleteProduct = async (req, res) => {
 
     /*
     |--------------------------------------------------------------------------
-    | Only seller can delete own product
+    | Only Seller Can Delete
     |--------------------------------------------------------------------------
     */
 
-    if (
-      product.seller.toString() !==
-      req.user._id.toString()
-    ) {
+    if (product.seller.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message:
-          "You are not authorized to delete this product.",
+        message: "You are not authorized to delete this product.",
       });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Delete
+    |--------------------------------------------------------------------------
+    */
+
     await Product.findByIdAndDelete(id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Product deleted successfully.",
     });
   } catch (error) {
-    console.error(
-      "Delete Product Error:",
-      error,
-    );
+    console.error("Delete Product Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to delete product.",
     });
   }
 };
+
+/*
+|--------------------------------------------------------------------------
+| EXPORTS
+|--------------------------------------------------------------------------
+*/
 
 module.exports = {
   createProduct,

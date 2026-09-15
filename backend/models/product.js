@@ -42,13 +42,22 @@ const productSchema = new mongoose.Schema(
     condition: {
       type: String,
       required: true,
-      enum: ["New", "Like New", "Good", "Fair"],
+      enum: [
+        "New",
+        "Like New",
+        "Good",
+        "Fair",
+      ],
       default: "Good",
     },
 
     listingType: {
       type: String,
-      enum: ["Sell", "Rent", "Exchange"],
+      enum: [
+        "Sell",
+        "Rent",
+        "Exchange",
+      ],
       default: "Sell",
     },
 
@@ -72,7 +81,8 @@ const productSchema = new mongoose.Schema(
 
     college: {
       type: String,
-      default: "Narula Institute of Technology",
+      default:
+        "Narula Institute of Technology",
       trim: true,
     },
 
@@ -113,4 +123,7 @@ const productSchema = new mongoose.Schema(
 
 module.exports =
   mongoose.models.Product ||
-  mongoose.model("Product", productSchema);
+  mongoose.model(
+    "Product",
+    productSchema,
+  );
