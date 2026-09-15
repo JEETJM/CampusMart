@@ -13,37 +13,46 @@ import api from "../services/api";
 
 function ProductReviews({ productId }) {
   const [reviews, setReviews] = useState([]);
-
   const [averageRating, setAverageRating] = useState(0);
-
   const [reviewCount, setReviewCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
-
   const [submitting, setSubmitting] = useState(false);
-
   const [deleting, setDeleting] = useState(false);
 
   const [error, setError] = useState("");
-
   const [success, setSuccess] = useState("");
 
   const [showForm, setShowForm] = useState(false);
-
   const [editingReview, setEditingReview] = useState(null);
 
-  /* STAR HOVER STATE */
-  const [hoverRating, setHoverRating] = useState(0);
+  /* =========================================================
+     AUTH
+  ========================================================= */
+
+  const token = localStorage.getItem("campusmart_token");
+
+  /* =========================================================
+     REVIEW DATA
+  ========================================================= */
 
   const [myReview, setMyReview] = useState(null);
+
+  const [reviewEligibility, setReviewEligibility] = useState(null);
+
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+
+  /* =========================================================
+     STAR HOVER
+  ========================================================= */
+
+  const [hoverRating, setHoverRating] = useState(0);
 
   const [formData, setFormData] = useState({
     rating: 5,
     title: "",
     comment: "",
   });
-
-  const token = localStorage.getItem("campusmart_token");
 
   /* =========================================================
      LOAD REVIEWS
@@ -90,12 +99,65 @@ function ProductReviews({ productId }) {
       setMyReview(response.data?.review || null);
     } catch (err) {
       console.error("My Review Error:", err);
+
+      setMyReview(null);
     }
   };
+
+  /* =========================================================
+     CHECK REVIEW ELIGIBILITY
+  ========================================================= */
+
+  const checkEligibility = async () => {
+    if (!productId || !token) {
+      setReviewEligibility({
+        eligible: false,
+        alreadyReviewed: false,
+        type: null,
+        transactionId: null,
+        message: "Login required to review this product.",
+      });
+
+      return;
+    }
+
+    try {
+      setEligibilityLoading(true);
+
+      const response = await api.get(
+        `/reviews/product/${productId}/eligibility`,
+      );
+
+      setReviewEligibility(
+        response.data || {
+          eligible: false,
+          alreadyReviewed: false,
+        },
+      );
+    } catch (err) {
+      console.error("Review Eligibility Error:", err);
+
+      setReviewEligibility({
+        eligible: false,
+        alreadyReviewed: false,
+        type: null,
+        transactionId: null,
+        message:
+          err.response?.data?.message || "Unable to check review eligibility.",
+      });
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
+
+  /* =========================================================
+     INITIAL LOAD
+  ========================================================= */
 
   useEffect(() => {
     loadReviews();
     loadMyReview();
+    checkEligibility();
   }, [productId, token]);
 
   /* =========================================================
@@ -105,6 +167,14 @@ function ProductReviews({ productId }) {
   const openCreateForm = () => {
     if (!token) {
       window.location.href = "/login";
+      return;
+    }
+
+    if (!reviewEligibility?.eligible || reviewEligibility?.alreadyReviewed) {
+      setError(
+        reviewEligibility?.message ||
+          "You are not eligible to review this product.",
+      );
 
       return;
     }
@@ -179,7 +249,7 @@ function ProductReviews({ productId }) {
   };
 
   /* =========================================================
-     RATING CLICK
+     RATING
   ========================================================= */
 
   const handleRating = (value) => {
@@ -193,7 +263,7 @@ function ProductReviews({ productId }) {
   };
 
   /* =========================================================
-     SUBMIT
+     SUBMIT REVIEW
   ========================================================= */
 
   const handleSubmit = async (event) => {
@@ -202,9 +272,10 @@ function ProductReviews({ productId }) {
     setError("");
     setSuccess("");
 
-    if (!formData.comment.trim()) {
-      setError("Please write a review.");
+    const comment = formData.comment.trim();
 
+    if (!comment) {
+      setError("Please write a review.");
       return;
     }
 
@@ -212,34 +283,76 @@ function ProductReviews({ productId }) {
 
     if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
       setError("Please select a rating.");
-
       return;
     }
 
     try {
       setSubmitting(true);
 
+      /* =====================================================
+         UPDATE EXISTING REVIEW
+      ===================================================== */
+
       if (editingReview) {
         await api.put(`/reviews/${editingReview._id}`, {
           rating,
           title: formData.title.trim(),
-          comment: formData.comment.trim(),
+          comment,
         });
 
         setSuccess("Review updated successfully.");
       } else {
-        await api.post("/reviews", {
+
+      /* =====================================================
+         CREATE VERIFIED REVIEW
+      ===================================================== */
+        if (
+          !reviewEligibility?.eligible ||
+          reviewEligibility?.alreadyReviewed
+        ) {
+          setError(
+            reviewEligibility?.message ||
+              "You are not eligible to review this product.",
+          );
+
+          return;
+        }
+
+        const payload = {
           productId,
           rating,
           title: formData.title.trim(),
-          comment: formData.comment.trim(),
-        });
+          comment,
+        };
 
-        setSuccess("Review submitted successfully.");
+        /* ---------------------------------------------------
+           PURCHASE
+        --------------------------------------------------- */
+
+        if (reviewEligibility.type === "purchase") {
+          payload.orderId = reviewEligibility.transactionId;
+        }
+
+        /* ---------------------------------------------------
+           RENTAL
+        --------------------------------------------------- */
+
+        if (reviewEligibility.type === "rental") {
+          payload.rentalId = reviewEligibility.transactionId;
+        }
+
+        await api.post("/reviews", payload);
+
+        setSuccess("Verified review submitted successfully.");
       }
+
+      /* =====================================================
+         REFRESH EVERYTHING
+      ===================================================== */
 
       await loadReviews();
       await loadMyReview();
+      await checkEligibility();
 
       setShowForm(false);
       setEditingReview(null);
@@ -260,7 +373,7 @@ function ProductReviews({ productId }) {
   };
 
   /* =========================================================
-     DELETE
+     DELETE REVIEW
   ========================================================= */
 
   const handleDelete = async () => {
@@ -277,6 +390,7 @@ function ProductReviews({ productId }) {
     try {
       setDeleting(true);
       setError("");
+      setSuccess("");
 
       await api.delete(`/reviews/${myReview._id}`);
 
@@ -286,6 +400,7 @@ function ProductReviews({ productId }) {
 
       await loadReviews();
       await loadMyReview();
+      await checkEligibility();
     } catch (err) {
       console.error("Delete Review Error:", err);
 
@@ -313,11 +428,13 @@ function ProductReviews({ productId }) {
      RATING LABEL
   ========================================================= */
 
+  const selectedRating = Number(hoverRating || formData.rating);
+
   const ratingLabel =
-    Number(hoverRating || formData.rating) === 1 ? "Poor"
-    : Number(hoverRating || formData.rating) === 2 ? "Fair"
-    : Number(hoverRating || formData.rating) === 3 ? "Good"
-    : Number(hoverRating || formData.rating) === 4 ? "Very Good"
+    selectedRating === 1 ? "Poor"
+    : selectedRating === 2 ? "Fair"
+    : selectedRating === 3 ? "Good"
+    : selectedRating === 4 ? "Very Good"
     : "Excellent";
 
   return (
@@ -356,18 +473,55 @@ function ProductReviews({ productId }) {
             </div>
           )}
 
-          {token && !myReview && (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-            >
-              <MessageSquare size={16} />
-              Write Review
-            </button>
-          )}
+          {/* =================================================
+              WRITE REVIEW BUTTON
+          ================================================= */}
+
+          {token &&
+            !myReview &&
+            !eligibilityLoading &&
+            reviewEligibility?.eligible &&
+            !reviewEligibility?.alreadyReviewed && (
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+              >
+                <MessageSquare size={16} />
+                Write Review
+              </button>
+            )}
         </div>
       </div>
+
+      {/* =====================================================
+          ELIGIBILITY INFO
+      ===================================================== */}
+
+      {token &&
+        !myReview &&
+        !eligibilityLoading &&
+        reviewEligibility &&
+        !reviewEligibility.eligible &&
+        !reviewEligibility.alreadyReviewed && (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+            {reviewEligibility.message ||
+              "Complete a purchase or rental before reviewing this product."}
+          </div>
+        )}
+
+      {!token && (
+        <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+          Login to review this product.
+        </div>
+      )}
+
+      {eligibilityLoading && token && (
+        <div className="mt-5 flex items-center gap-2 text-xs font-medium text-slate-400">
+          <Loader2 size={15} className="animate-spin" />
+          Checking review eligibility...
+        </div>
+      )}
 
       {/* =====================================================
           SUCCESS
@@ -440,6 +594,13 @@ function ProductReviews({ productId }) {
             </div>
           </div>
 
+          {myReview.isVerifiedPurchase && (
+            <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <CheckCircle2 size={12} />
+              Verified Transaction
+            </div>
+          )}
+
           {myReview.title && (
             <h3 className="mt-4 font-bold text-slate-900 dark:text-white">
               {myReview.title}
@@ -448,6 +609,10 @@ function ProductReviews({ productId }) {
 
           <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
             {myReview.comment}
+          </p>
+
+          <p className="mt-3 text-[11px] text-slate-400">
+            {formatDate(myReview.createdAt)}
           </p>
         </div>
       )}
@@ -479,10 +644,20 @@ function ProductReviews({ productId }) {
             </button>
           </div>
 
+          {!editingReview && (
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 size={15} />
+
+                {reviewEligibility?.type === "purchase" ?
+                  "Verified purchase review"
+                : "Verified rental review"}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-            {/* =================================================
-                STAR RATING
-            ================================================= */}
+            {/* RATING */}
 
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
@@ -577,7 +752,7 @@ function ProductReviews({ productId }) {
               </p>
             </div>
 
-            {/* FORM ERROR */}
+            {/* ERROR */}
 
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
@@ -585,7 +760,7 @@ function ProductReviews({ productId }) {
               </div>
             )}
 
-            {/* BUTTONS */}
+            {/* ACTIONS */}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
@@ -609,7 +784,7 @@ function ProductReviews({ productId }) {
                   </>
                 : <>
                     <CheckCircle2 size={16} />
-                    {editingReview ? "Update Review" : "Submit Review"}
+                    {editingReview ? "Update Review" : "Submit Verified Review"}
                   </>
                 }
               </button>
@@ -676,7 +851,7 @@ function ProductReviews({ productId }) {
                             {review.isVerifiedPurchase && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                 <CheckCircle2 size={11} />
-                                Verified
+                                Verified Transaction
                               </span>
                             )}
                           </div>

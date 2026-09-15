@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
+    // ==========================================================
+    // BASIC INFORMATION
+    // ==========================================================
+
     name: {
       type: String,
       required: true,
@@ -31,11 +35,19 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
 
+    // ==========================================================
+    // COLLEGE
+    // ==========================================================
+
     college: {
       type: String,
       default: "Narula Institute of Technology",
       trim: true,
     },
+
+    // ==========================================================
+    // ROLE & ACCOUNT STATUS
+    // ==========================================================
 
     role: {
       type: String,
@@ -47,6 +59,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    // ==========================================================
+    // PROFILE
+    // ==========================================================
 
     profileImage: {
       type: String,
@@ -65,21 +86,31 @@ const userSchema = new mongoose.Schema(
       maxlength: 250,
     },
 
+    // ==========================================================
+    // LOCATION
+    // ==========================================================
+
     location: {
       type: String,
       default: "",
       trim: true,
     },
+
     locationCoordinates: {
       lat: {
         type: Number,
         default: null,
       },
+
       lng: {
         type: Number,
         default: null,
       },
     },
+
+    // ==========================================================
+    // WISHLIST
+    // ==========================================================
 
     wishlist: [
       {
@@ -88,7 +119,10 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    // Password Reset
+    // ==========================================================
+    // PASSWORD RESET
+    // ==========================================================
+
     resetPasswordToken: {
       type: String,
       default: null,
@@ -105,4 +139,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model(
+  "User",
+  userSchema,
+);

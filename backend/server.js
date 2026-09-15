@@ -6,6 +6,10 @@ const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
 
+// ==========================================
+// ROUTES
+// ==========================================
+
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
@@ -14,8 +18,17 @@ const orderRoutes = require("./routes/orderRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const exchangeRoutes = require("./routes/exchangeRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 const rentalRoutes = require("./routes/rentalRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+
+// ==========================================
+// APP
+// ==========================================
+
 const app = express();
 
 // ==========================================
@@ -36,8 +49,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without origin
-      // such as Postman/server-side requests
+      // Allow requests without Origin header
+      // Example: Postman / server-side requests
       if (!origin) {
         return callback(null, true);
       }
@@ -69,10 +82,10 @@ app.use(
     limit: "10mb",
   }),
 );
-app.use(
-  "/api/reviews",
-  reviewRoutes,
-);
+
+// ==========================================
+// COOKIE PARSER
+// ==========================================
 
 app.use(cookieParser());
 
@@ -92,32 +105,57 @@ app.get("/", (req, res) => {
 // API ROUTES
 // ==========================================
 
+// Authentication
 app.use("/api/auth", authRoutes);
 
+// Products
 app.use("/api/products", productRoutes);
 
+// Upload
 app.use("/api/upload", uploadRoutes);
 
+// Cart
 app.use("/api/cart", cartRoutes);
 
+// Orders
 app.use("/api/orders", orderRoutes);
 
+// Wishlist
 app.use("/api/wishlist", wishlistRoutes);
 
+// Notifications
+app.use("/api/notifications", notificationRoutes);
+
+// Chat
 app.use("/api/chat", chatRoutes);
 
+// Payments
+app.use("/api/payments", paymentRoutes);
+
+// Exchange
 app.use("/api/exchange", exchangeRoutes);
 
+// Rentals
 app.use("/api/rentals", rentalRoutes);
 
+// Reviews
+app.use("/api/reviews", reviewRoutes);
+
+// Reports & Safety
+app.use("/api/reports", reportRoutes);
+
+// Admin
+app.use("/api/admin", adminRoutes);
+
 // ==========================================
-// 404
+// 404 ROUTE
 // ==========================================
 
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: "API route not found.",
+    path: req.originalUrl,
   });
 });
 
@@ -128,6 +166,7 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error("Server Error:", error);
 
+  // CORS error
   if (error.message === "Not allowed by CORS") {
     return res.status(403).json({
       success: false,

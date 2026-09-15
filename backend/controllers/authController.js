@@ -198,6 +198,7 @@ const registerUser = async (req, res) => {
 
         role: user.role,
         isVerified: user.isVerified,
+        isActive: user.isActive,
 
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -214,13 +215,14 @@ const registerUser = async (req, res) => {
 };
 
 // ============================================================
-// LOGIN
+// STUDENT LOGIN
 // ============================================================
 
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
+    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -230,7 +232,10 @@ const loginUser = async (req, res) => {
 
     const normalizedEmail = String(email).toLowerCase().trim();
 
-    // Find user
+    // ========================================================
+    // FIND USER
+    // ========================================================
+
     const user = await User.findOne({
       email: normalizedEmail,
     });
@@ -242,7 +247,33 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Compare password
+    // ========================================================
+    // BLOCK ADMIN FROM STUDENT LOGIN
+    // ========================================================
+
+    if (String(user.role).toLowerCase() === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin account detected. Please use Admin Login.",
+        code: "ADMIN_ACCOUNT",
+      });
+    }
+
+    // ========================================================
+    // ACTIVE CHECK
+    // ========================================================
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is inactive. Please contact the administrator.",
+      });
+    }
+
+    // ========================================================
+    // PASSWORD CHECK
+    // ========================================================
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -252,8 +283,15 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate JWT
+    // ========================================================
+    // GENERATE TOKEN
+    // ========================================================
+
     const token = generateToken(user._id);
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return res.status(200).json({
       success: true,
@@ -275,6 +313,7 @@ const loginUser = async (req, res) => {
 
         role: user.role,
         isVerified: user.isVerified,
+        isActive: user.isActive,
 
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -286,6 +325,121 @@ const loginUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error during login.",
+    });
+  }
+};
+
+// ============================================================
+// ADMIN LOGIN
+// ============================================================
+
+const adminLoginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+
+    // ========================================================
+    // FIND USER
+    // ========================================================
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin email or password.",
+      });
+    }
+
+    // ========================================================
+    // ADMIN ROLE CHECK
+    // ========================================================
+
+    if (String(user.role).toLowerCase() !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "This account does not have admin access.",
+        code: "NOT_ADMIN",
+      });
+    }
+
+    // ========================================================
+    // ACTIVE CHECK
+    // ========================================================
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: "This admin account is inactive.",
+      });
+    }
+
+    // ========================================================
+    // PASSWORD CHECK
+    // ========================================================
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin email or password.",
+      });
+    }
+
+    // ========================================================
+    // GENERATE TOKEN
+    // ========================================================
+
+    const token = generateToken(user._id);
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin login successful.",
+
+      token,
+
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        studentId: user.studentId || "",
+        college: user.college || "",
+        location: user.location || "",
+
+        locationCoordinates: user.locationCoordinates || null,
+
+        profileImage: user.profileImage || "",
+
+        role: user.role,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Admin Login Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during admin login.",
     });
   }
 };
@@ -359,6 +513,10 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
+
+    // ========================================================
+    // EMAIL TEMPLATE
+    // ========================================================
 
     const emailHTML = `
       <!DOCTYPE html>
@@ -491,9 +649,7 @@ const forgotPassword = async (req, res) => {
 
     await sendEmail({
       to: normalizedEmail,
-
       subject: "CampusMart Password Reset OTP",
-
       html: emailHTML,
     });
 
@@ -618,8 +774,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // Hash new password
     user.password = await bcrypt.hash(newPassword, 12);
 
+    // Clear OTP
     user.resetPasswordToken = null;
 
     user.resetPasswordExpire = null;
@@ -830,6 +988,7 @@ const updateProfile = async (req, res) => {
 
       role: user.role,
       isVerified: user.isVerified,
+      isActive: user.isActive,
 
       createdAt: user.createdAt,
 
@@ -858,6 +1017,7 @@ const updateProfile = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  adminLoginUser,
   getMe,
   forgotPassword,
   verifyResetOTP,

@@ -3,6 +3,7 @@ const express = require("express");
 const {
   registerUser,
   loginUser,
+  adminLoginUser,
   getMe,
   forgotPassword,
   verifyResetOTP,
@@ -15,33 +16,22 @@ const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
-// ===============================
-// REGISTER
-// ===============================
+// Student authentication
 router.post("/register", registerUser);
-
-// ===============================
-// LOGIN
-// ===============================
 router.post("/login", loginUser);
 
-// ===============================
-// CURRENT USER
-// ===============================
+// Admin authentication
+router.post("/admin-login", adminLoginUser);
+
+// Current logged-in user
 router.get("/me", protect, getMe);
 
-// ===============================
-// PASSWORD RESET
-// ===============================
+// Forgot password
 router.post("/forgot-password", forgotPassword);
-
 router.post("/verify-reset-otp", verifyResetOTP);
-
 router.post("/reset-password", resetPassword);
 
-// ===============================
-// UPDATE PROFILE
-// ===============================
+// Profile
 router.put("/profile", protect, upload.single("profileImage"), updateProfile);
 
 module.exports = router;

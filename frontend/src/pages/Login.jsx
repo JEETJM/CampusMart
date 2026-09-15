@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   ArrowRight,
@@ -11,6 +10,8 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
+
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import api from "../services/api";
 
@@ -31,11 +32,9 @@ function Login() {
 
   const redirectPath = location.state?.from || "/profile";
 
-  /*
-  =========================================================
-  THEME
-  =========================================================
-  */
+  // =========================================================
+  // THEME
+  // =========================================================
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("campusmart_theme") || "light";
@@ -45,11 +44,9 @@ function Login() {
     document.documentElement.classList.add(savedTheme);
   }, []);
 
-  /*
-  =========================================================
-  INPUT CHANGE
-  =========================================================
-  */
+  // =========================================================
+  // INPUT CHANGE
+  // =========================================================
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -64,11 +61,9 @@ function Login() {
     }
   };
 
-  /*
-  =========================================================
-  SUBMIT
-  =========================================================
-  */
+  // =========================================================
+  // SUBMIT
+  // =========================================================
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -97,21 +92,45 @@ function Login() {
 
       const user = response.data?.user || response.data?.data?.user;
 
-      if (!token) {
-        throw new Error("Login token was not returned by the server.");
+      if (!token || !user) {
+        throw new Error("Login response was incomplete.");
       }
+
+      // ======================================================
+      // BLOCK ADMIN SESSION
+      // ======================================================
+
+      if (String(user.role || "").toLowerCase() === "admin") {
+        setError("This is an admin account. Please use Admin Login.");
+
+        return;
+      }
+
+      // ======================================================
+      // CLEAR ADMIN SESSION
+      // ======================================================
+
+      localStorage.removeItem("campusmart_admin_token");
+
+      localStorage.removeItem("campusmart_admin_user");
+
+      // ======================================================
+      // SAVE STUDENT SESSION
+      // ======================================================
 
       localStorage.setItem("campusmart_token", token);
 
-      if (user) {
-        localStorage.setItem("campusmart_user", JSON.stringify(user));
-      }
+      localStorage.setItem("campusmart_user", JSON.stringify(user));
+
+      // ======================================================
+      // REDIRECT
+      // ======================================================
 
       navigate(redirectPath, {
         replace: true,
       });
     } catch (error) {
-      console.error("Login Error:", error);
+      console.error("Student Login Error:", error);
 
       setError(
         error.response?.data?.message ||
@@ -125,7 +144,7 @@ function Login() {
 
   return (
     <main className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-[#f7fbff] px-4 py-10 text-slate-900 transition-colors dark:bg-[#070d18] dark:text-slate-100 sm:px-6">
-      {/* BACKGROUND GLOW */}
+      {/* BACKGROUND */}
 
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl dark:bg-blue-500/10" />
 
@@ -133,9 +152,7 @@ function Login() {
 
       <div className="relative mx-auto flex min-h-[calc(100vh-152px)] max-w-md items-center justify-center">
         <div className="w-full">
-          {/* =================================================
-              BRAND
-          ================================================== */}
+          {/* BRAND */}
 
           <div className="mb-7 flex justify-center">
             <Link to="/" className="group inline-flex items-center gap-3">
@@ -159,11 +176,9 @@ function Login() {
             </Link>
           </div>
 
-          {/* =================================================
-              CARD
-          ================================================== */}
+          {/* CARD */}
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_70px_rgba(37,99,235,0.10)] transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_70px_rgba(0,0,0,0.45)] sm:p-8">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_70px_rgba(37,99,235,0.10)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_70px_rgba(0,0,0,0.45)] sm:p-8">
             {/* HEADER */}
 
             <div className="text-center">
@@ -256,9 +271,6 @@ function Login() {
                     type="button"
                     onClick={() => setShowPassword((previous) => !previous)}
                     className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
                   >
                     {showPassword ?
                       <EyeOff size={17} />
@@ -289,14 +301,35 @@ function Login() {
                   </>
                 : <>
                     Sign in
-                    <ArrowRight
-                      size={17}
-                      className="transition group-hover:translate-x-0.5"
-                    />
+                    <ArrowRight size={17} />
                   </>
                 }
               </button>
             </form>
+
+            {/* ADMIN LOGIN */}
+
+            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">
+                    Are you an administrator?
+                  </p>
+
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    Use the dedicated admin login.
+                  </p>
+                </div>
+
+                <Link
+                  to="/admin/login"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+                >
+                  <ShieldCheck size={14} />
+                  Admin Login
+                </Link>
+              </div>
+            </div>
 
             {/* REGISTER */}
 

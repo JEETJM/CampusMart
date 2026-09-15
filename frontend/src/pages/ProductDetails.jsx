@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   ArrowRightLeft,
   BadgeCheck,
   CalendarDays,
   CheckCircle2,
+  Flag,
   Heart,
   MapPin,
   MessageCircle,
@@ -53,6 +55,22 @@ function ProductDetails() {
   ========================================================= */
 
   const [cartMessage, setCartMessage] = useState("");
+
+  /* =========================================================
+     REPORT PRODUCT
+  ========================================================= */
+
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const [reportReason, setReportReason] = useState("");
+
+  const [reportDescription, setReportDescription] = useState("");
+
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const [reportError, setReportError] = useState("");
+
+  const [reportSuccess, setReportSuccess] = useState("");
 
   /* =========================================================
      EXCHANGE
@@ -276,6 +294,85 @@ function ProductDetails() {
       );
     } finally {
       setWishlistLoading(false);
+    }
+  };
+
+  /* =========================================================
+     OPEN REPORT MODAL
+  ========================================================= */
+
+  const openReportModal = () => {
+    const token = localStorage.getItem("campusmart_token");
+
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
+      return;
+    }
+
+    if (!product) {
+      return;
+    }
+
+    setReportReason("");
+    setReportDescription("");
+    setReportError("");
+    setReportSuccess("");
+    setShowReportModal(true);
+  };
+
+  /* =========================================================
+     SUBMIT REPORT
+  ========================================================= */
+
+  const handleReportProduct = async (event) => {
+    event.preventDefault();
+
+    if (!product?._id) {
+      return;
+    }
+
+    if (!reportReason) {
+      setReportError("Please select a reason for reporting this product.");
+
+      return;
+    }
+
+    try {
+      setReportLoading(true);
+      setReportError("");
+      setReportSuccess("");
+
+      const response = await api.post("/reports", {
+        type: "Product",
+        productId: product._id,
+        reason: reportReason,
+        description: reportDescription.trim(),
+      });
+
+      setReportSuccess(
+        response.data?.message || "Report submitted successfully.",
+      );
+
+      setReportReason("");
+      setReportDescription("");
+
+      setTimeout(() => {
+        setShowReportModal(false);
+        setReportSuccess("");
+      }, 1400);
+    } catch (error) {
+      console.error("Report Product Error:", error);
+
+      setReportError(
+        error.response?.data?.message || "Unable to submit report.",
+      );
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -1003,7 +1100,6 @@ function ProductDetails() {
                 {rentalSuccess && (
                   <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                     <CheckCircle2 size={17} />
-
                     {rentalSuccess}
                   </div>
                 )}
@@ -1072,12 +1168,26 @@ function ProductDetails() {
               )}
             </div>
 
+            {/* =================================================
+                REPORT PRODUCT
+            ================================================== */}
+
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={openReportModal}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-red-500/40 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+              >
+                <Flag size={16} />
+                Report Product
+              </button>
+            </div>
+
             {/* COMMON MESSAGE */}
 
             {cartMessage && (
               <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                 <CheckCircle2 size={17} />
-
                 {cartMessage}
               </div>
             )}
@@ -1220,6 +1330,230 @@ function ProductDetails() {
           </Link>
         </div>
       </main>
+
+      {/* =====================================================
+          REPORT PRODUCT MODAL
+      ===================================================== */}
+
+      {showReportModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 px-4 py-6 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            {/* HEADER */}
+
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                  <AlertTriangle size={21} />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+                    Report Product
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
+                    Help keep CampusMart safe for students.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (reportLoading) {
+                    return;
+                  }
+
+                  setShowReportModal(false);
+
+                  setReportError("");
+
+                  setReportSuccess("");
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                aria-label="Close report modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* FORM */}
+
+            <form onSubmit={handleReportProduct} className="space-y-5 p-6">
+              {/* PRODUCT */}
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Reported Product
+                </p>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-slate-900">
+                    <img
+                      src={images[0]}
+                      alt={product.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                      {product.title}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Listed by {sellerName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* REASON */}
+
+              <div>
+                <label
+                  htmlFor="report-reason"
+                  className="mb-2 block text-sm font-bold text-slate-900 dark:text-white"
+                >
+                  Reason for reporting
+                </label>
+
+                <select
+                  id="report-reason"
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                  disabled={reportLoading}
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                >
+                  <option value="">Select a reason</option>
+
+                  <option value="Fraud or Scam">Fraud or Scam</option>
+
+                  <option value="Fake Product">Fake Product</option>
+
+                  <option value="Wrong Information">Wrong Information</option>
+
+                  <option value="Prohibited Item">Prohibited Item</option>
+
+                  <option value="Inappropriate Content">
+                    Inappropriate Content
+                  </option>
+
+                  <option value="Harassment">Harassment</option>
+
+                  <option value="Spam">Spam</option>
+
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* DESCRIPTION */}
+
+              <div>
+                <label
+                  htmlFor="report-description"
+                  className="mb-2 block text-sm font-bold text-slate-900 dark:text-white"
+                >
+                  Additional details
+                  <span className="ml-1 font-normal text-slate-400">
+                    (optional)
+                  </span>
+                </label>
+
+                <textarea
+                  id="report-description"
+                  value={reportDescription}
+                  onChange={(event) => setReportDescription(event.target.value)}
+                  disabled={reportLoading}
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="Explain the problem clearly. Avoid sharing passwords, OTPs or other sensitive information."
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                />
+
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {reportDescription.length}
+                  /1000
+                </p>
+              </div>
+
+              {/* SAFETY NOTE */}
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck
+                    size={16}
+                    className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+                  />
+
+                  <p className="text-xs leading-5 text-amber-800 dark:text-amber-300">
+                    Submit a report only when you believe the listing violates
+                    CampusMart rules or creates a safety concern.
+                  </p>
+                </div>
+              </div>
+
+              {/* ERROR */}
+
+              {reportError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+                  {reportError}
+                </div>
+              )}
+
+              {/* SUCCESS */}
+
+              {reportSuccess && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <CheckCircle2 size={17} />
+
+                  {reportSuccess}
+                </div>
+              )}
+
+              {/* ACTIONS */}
+
+              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (reportLoading) {
+                      return;
+                    }
+
+                    setShowReportModal(false);
+
+                    setReportError("");
+
+                    setReportSuccess("");
+                  }}
+                  disabled={reportLoading}
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={reportLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {reportLoading ?
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Submitting...
+                    </>
+                  : <>
+                      <Flag size={16} />
+                      Submit Report
+                    </>
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* =====================================================
           EXCHANGE MODAL

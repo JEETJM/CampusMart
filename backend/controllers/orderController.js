@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const createNotification = require("../utils/createNotification");
 
 // ===============================
 // GENERATE ORDER NUMBER
@@ -18,15 +19,22 @@ const generateOrderNumber = () => {
 // ===============================
 const createOrder = async (req, res) => {
   try {
-    const { pickupLocation, paymentMethod, notes } = req.body || {};
+    const { pickupLocation, pickupCoordinates, paymentMethod, notes } =
+      req.body || {};
 
-    if (!pickupLocation?.trim()) {
+    // ===============================
+    // PICKUP LOCATION VALIDATION
+    // ===============================
+    if (!pickupLocation || !String(pickupLocation).trim()) {
       return res.status(400).json({
         success: false,
         message: "Pickup location is required.",
       });
     }
 
+    // ===============================
+    // PAYMENT METHOD
+    // ===============================
     const selectedPaymentMethod = paymentMethod || "Cash on Pickup";
 
     if (!["Cash on Pickup", "Online"].includes(selectedPaymentMethod)) {
@@ -49,7 +57,7 @@ const createOrder = async (req, res) => {
       },
     });
 
-    if (!cart || cart.items.length === 0) {
+    if (!cart || !cart.items || cart.items.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Your cart is empty.",
@@ -72,6 +80,9 @@ const createOrder = async (req, res) => {
         continue;
       }
 
+      // ===============================
+      // PRODUCT AVAILABILITY
+      // ===============================
       if (!product.isAvailable) {
         return res.status(400).json({
           success: false,
@@ -79,11 +90,39 @@ const createOrder = async (req, res) => {
         });
       }
 
-      // Prevent buying own product
-      if (product.seller.toString() === req.user._id.toString()) {
+      // ===============================
+      // PREVENT BUYING OWN PRODUCT
+      // ===============================
+      if (String(product.seller) === String(req.user._id)) {
         return res.status(400).json({
           success: false,
           message: "You cannot purchase your own product.",
+        });
+      }
+
+      // ===============================
+      // QUANTITY
+      // ===============================
+      const quantity = Number(item.quantity || 1);
+
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid quantity for ${product.title}.`,
+        });
+      }
+
+      // ===============================
+      // STOCK CHECK
+      // ===============================
+      if (
+        product.stock !== undefined &&
+        product.stock !== null &&
+        quantity > Number(product.stock)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: `Only ${product.stock} unit(s) of ${product.title} are available.`,
         });
       }
 
@@ -91,12 +130,15 @@ const createOrder = async (req, res) => {
         product: product._id,
         title: product.title,
         image: product.images?.[0] || "",
-        price: product.price,
-        quantity: item.quantity,
+        price: Number(product.price || 0),
+        quantity,
         seller: product.seller,
       });
     }
 
+    // ===============================
+    // VALID ITEM CHECK
+    // ===============================
     if (validItems.length === 0) {
       return res.status(400).json({
         success: false,
@@ -105,14 +147,55 @@ const createOrder = async (req, res) => {
     }
 
     // ===============================
-    // CALCULATE SUBTOTAL
+    // SERVER-SIDE SUBTOTAL
     // ===============================
-    const subtotal = validItems.reduce((total, item) => {
-      return total + item.price * item.quantity;
-    }, 0);
+    const subtotal = validItems.reduce(
+      (total, item) =>
+        total + Number(item.price || 0) * Number(item.quantity || 1),
+      0,
+    );
+
+    if (!Number.isFinite(subtotal) || subtotal <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order amount.",
+      });
+    }
 
     // ===============================
-    // CREATE ORDER
+    // PICKUP COORDINATES
+    // ===============================
+    let pickupLat = null;
+    let pickupLng = null;
+
+    if (
+      pickupCoordinates &&
+      pickupCoordinates.lat !== undefined &&
+      pickupCoordinates.lat !== null &&
+      pickupCoordinates.lat !== ""
+    ) {
+      const parsedLat = Number(pickupCoordinates.lat);
+
+      if (Number.isFinite(parsedLat)) {
+        pickupLat = parsedLat;
+      }
+    }
+
+    if (
+      pickupCoordinates &&
+      pickupCoordinates.lng !== undefined &&
+      pickupCoordinates.lng !== null &&
+      pickupCoordinates.lng !== ""
+    ) {
+      const parsedLng = Number(pickupCoordinates.lng);
+
+      if (Number.isFinite(parsedLng)) {
+        pickupLng = parsedLng;
+      }
+    }
+
+    // ===============================
+    // CREATE CAMPUSMART ORDER
     // ===============================
     const order = await Order.create({
       buyer: req.user._id,
@@ -121,25 +204,79 @@ const createOrder = async (req, res) => {
 
       subtotal,
 
-      pickupLocation: pickupLocation.trim(),
+      pickupLocation: String(pickupLocation).trim(),
+
+      pickupCoordinates: {
+        lat: pickupLat,
+        lng: pickupLng,
+      },
 
       paymentMethod: selectedPaymentMethod,
 
-      paymentStatus: selectedPaymentMethod === "Online" ? "Pending" : "Pending",
+      paymentStatus: "Pending",
 
       orderStatus: "Placed",
 
       orderNumber: generateOrderNumber(),
 
-      notes: notes?.trim() || "",
+      notes: String(notes || "").trim(),
     });
 
     // ===============================
-    // CLEAR CART
+    // CASH ORDER
     // ===============================
-    cart.items = [];
+    if (selectedPaymentMethod === "Cash on Pickup") {
+      cart.items = [];
+      await cart.save();
+    }
 
-    await cart.save();
+    // ===============================
+    // COLLECT UNIQUE SELLERS
+    // ===============================
+    const sellerIds = [
+      ...new Set(
+        order.items
+          .filter((item) => item.seller)
+          .map((item) => String(item.seller)),
+      ),
+    ];
+
+    // ===============================
+    // BUYER NOTIFICATION
+    // ===============================
+    if (selectedPaymentMethod === "Online") {
+      await createNotification({
+        user: req.user._id,
+        type: "order",
+        title: "Order created",
+        message: `Your order ${order.orderNumber} has been created. Complete the online payment to continue.`,
+        link: `/orders/${order._id}`,
+      });
+    } else {
+      await createNotification({
+        user: req.user._id,
+        type: "order",
+        title: "Order placed successfully",
+        message: `Your order ${order.orderNumber} has been placed successfully with Cash on Pickup.`,
+        link: `/orders/${order._id}`,
+      });
+    }
+
+    // ===============================
+    // SELLER NOTIFICATIONS
+    // ===============================
+    for (const sellerId of sellerIds) {
+      await createNotification({
+        user: sellerId,
+        type: "order",
+        title: "New order received",
+        message:
+          selectedPaymentMethod === "Online" ?
+            `A new order ${order.orderNumber} has been created. Payment is currently pending.`
+          : `You have received a new Cash on Pickup order ${order.orderNumber}.`,
+        link: `/seller/orders`,
+      });
+    }
 
     // ===============================
     // POPULATE ORDER
@@ -147,11 +284,19 @@ const createOrder = async (req, res) => {
     const populatedOrder = await Order.findById(order._id)
       .populate("buyer", "name email studentId college")
       .populate("items.seller", "name email studentId college isVerified")
-      .populate("items.product", "title images category condition");
+      .populate("items.product", "title images category condition price");
 
+    // ===============================
+    // RESPONSE
+    // ===============================
     return res.status(201).json({
       success: true,
-      message: "Order placed successfully.",
+
+      message:
+        selectedPaymentMethod === "Online" ?
+          "Order created. Complete online payment to continue."
+        : "Order placed successfully.",
+
       order: populatedOrder,
     });
   } catch (error) {
@@ -172,7 +317,7 @@ const getMyOrders = async (req, res) => {
     const orders = await Order.find({
       buyer: req.user._id,
     })
-      .populate("items.product", "title images category condition")
+      .populate("items.product", "title images category condition price")
       .populate("items.seller", "name email studentId college isVerified")
       .sort({
         createdAt: -1,
@@ -202,7 +347,7 @@ const getOrderById = async (req, res) => {
 
     const order = await Order.findById(id)
       .populate("buyer", "name email studentId college")
-      .populate("items.product", "title images category condition")
+      .populate("items.product", "title images category condition price")
       .populate("items.seller", "name email studentId college isVerified");
 
     if (!order) {
@@ -212,8 +357,10 @@ const getOrderById = async (req, res) => {
       });
     }
 
-    // Only buyer can view own order
-    if (order.buyer._id.toString() !== req.user._id.toString()) {
+    // ===============================
+    // BUYER AUTHORIZATION
+    // ===============================
+    if (String(order.buyer._id) !== String(req.user._id)) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to view this order.",
@@ -233,6 +380,10 @@ const getOrderById = async (req, res) => {
     });
   }
 };
+
+// ===============================
+// GET SELLER ORDERS
+// ===============================
 const getSellerOrders = async (req, res) => {
   try {
     const sellerId = req.user._id;
@@ -242,13 +393,14 @@ const getSellerOrders = async (req, res) => {
     })
       .populate("buyer", "name email studentId college")
       .populate("items.product", "title images price")
-      .sort({ createdAt: -1 });
+      .sort({
+        createdAt: -1,
+      });
 
     const sellerOrders = orders
       .map((order) => {
         const sellerItems = order.items.filter(
-          (item) =>
-            item.seller && item.seller.toString() === sellerId.toString(),
+          (item) => item.seller && String(item.seller) === String(sellerId),
         );
 
         if (sellerItems.length === 0) {
@@ -256,45 +408,63 @@ const getSellerOrders = async (req, res) => {
         }
 
         const sellerSubtotal = sellerItems.reduce(
-          (total, item) => total + item.price * item.quantity,
+          (total, item) =>
+            total + Number(item.price || 0) * Number(item.quantity || 1),
           0,
         );
 
         return {
           _id: order._id,
+
           orderNumber: order.orderNumber,
+
           buyer: order.buyer,
+
           items: sellerItems,
+
           subtotal: sellerSubtotal,
+
           pickupLocation: order.pickupLocation,
+
+          pickupCoordinates: order.pickupCoordinates,
+
           paymentMethod: order.paymentMethod,
+
           paymentStatus: order.paymentStatus,
+
           orderStatus: order.orderStatus,
+
           notes: order.notes,
+
           createdAt: order.createdAt,
+
           updatedAt: order.updatedAt,
         };
       })
       .filter(Boolean);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       orders: sellerOrders,
     });
   } catch (error) {
     console.error("Get Seller Orders Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to fetch seller orders.",
     });
   }
 };
 
+// ===============================
+// UPDATE SELLER ORDER STATUS
+// ===============================
 const updateSellerOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { orderStatus } = req.body;
+
+    const { orderStatus } = req.body || {};
 
     const allowedStatuses = [
       "Confirmed",
@@ -319,10 +489,13 @@ const updateSellerOrderStatus = async (req, res) => {
       });
     }
 
-    const sellerId = req.user._id.toString();
+    const sellerId = String(req.user._id);
 
+    // ===============================
+    // SELLER OWNERSHIP
+    // ===============================
     const sellerOwnsProduct = order.items.some(
-      (item) => item.seller && item.seller.toString() === sellerId,
+      (item) => item.seller && String(item.seller) === sellerId,
     );
 
     if (!sellerOwnsProduct) {
@@ -332,6 +505,9 @@ const updateSellerOrderStatus = async (req, res) => {
       });
     }
 
+    // ===============================
+    // CANCELLED CHECK
+    // ===============================
     if (order.orderStatus === "Cancelled") {
       return res.status(400).json({
         success: false,
@@ -339,15 +515,75 @@ const updateSellerOrderStatus = async (req, res) => {
       });
     }
 
+    // ===============================
+    // ONLINE PAYMENT CHECK
+    // ===============================
+    if (order.paymentMethod === "Online" && order.paymentStatus !== "Paid") {
+      if (orderStatus !== "Cancelled") {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Online payment must be completed before updating this order status.",
+        });
+      }
+
+      // Do not allow seller to cancel
+      // an online paid/unpaid order here.
+      return res.status(400).json({
+        success: false,
+        message:
+          "This online order cannot be cancelled by the seller while payment is pending.",
+      });
+    }
+
+    // ===============================
+    // PAID ONLINE ORDER CANCELLATION
+    // ===============================
+    if (
+      orderStatus === "Cancelled" &&
+      order.paymentMethod === "Online" &&
+      order.paymentStatus === "Paid"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Paid online orders require refund processing before cancellation.",
+      });
+    }
+
+    // ===============================
+    // UPDATE STATUS
+    // ===============================
+    const previousStatus = order.orderStatus;
+
     order.orderStatus = orderStatus;
 
     await order.save();
+
+    // ===============================
+    // BUYER NOTIFICATION
+    // ===============================
+    if (previousStatus !== orderStatus) {
+      await createNotification({
+        user: order.buyer,
+        type: "order",
+        title:
+          orderStatus === "Cancelled" ? "Order cancelled" : (
+            "Order status updated"
+          ),
+        message:
+          orderStatus === "Cancelled" ?
+            `Your order ${order.orderNumber} has been cancelled by the seller.`
+          : `Your order ${order.orderNumber} is now "${orderStatus}".`,
+        link: `/orders/${order._id}`,
+      });
+    }
 
     await order.populate("buyer", "name email studentId college");
 
     await order.populate("items.product", "title images price");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Order status updated successfully.",
       order,
@@ -355,7 +591,7 @@ const updateSellerOrderStatus = async (req, res) => {
   } catch (error) {
     console.error("Update Seller Order Status Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Unable to update order status.",
     });
@@ -378,15 +614,19 @@ const cancelOrder = async (req, res) => {
       });
     }
 
-    // Only buyer can cancel
-    if (order.buyer.toString() !== req.user._id.toString()) {
+    // ===============================
+    // ONLY BUYER CAN CANCEL
+    // ===============================
+    if (String(order.buyer) !== String(req.user._id)) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to cancel this order.",
       });
     }
 
-    // Cannot cancel completed/cancelled orders
+    // ===============================
+    // CANNOT CANCEL
+    // ===============================
     if (["Completed", "Cancelled"].includes(order.orderStatus)) {
       return res.status(400).json({
         success: false,
@@ -394,9 +634,44 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    // ===============================
+    // PAID ONLINE ORDER
+    // ===============================
+    if (order.paymentMethod === "Online" && order.paymentStatus === "Paid") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Paid online orders require refund processing before cancellation.",
+      });
+    }
+
+    // ===============================
+    // CANCEL
+    // ===============================
     order.orderStatus = "Cancelled";
 
     await order.save();
+
+    // ===============================
+    // SELLER NOTIFICATIONS
+    // ===============================
+    const sellerIds = [
+      ...new Set(
+        order.items
+          .filter((item) => item.seller)
+          .map((item) => String(item.seller)),
+      ),
+    ];
+
+    for (const sellerId of sellerIds) {
+      await createNotification({
+        user: sellerId,
+        type: "order",
+        title: "Order cancelled",
+        message: `Order ${order.orderNumber} has been cancelled by the buyer.`,
+        link: `/seller/orders`,
+      });
+    }
 
     return res.status(200).json({
       success: true,

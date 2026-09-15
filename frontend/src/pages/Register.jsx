@@ -29,7 +29,7 @@ function Register() {
     name: "",
     email: "",
     password: "",
-    college: "Narula Institute of Technology",
+    college: "",
     studentId: "",
     location: "",
   });
