@@ -11,7 +11,6 @@ import {
   Moon,
   Search,
   ShoppingCart,
-  Store,
   Sun,
   User,
   X,
@@ -158,30 +157,16 @@ function Navbar() {
             className="group flex shrink-0 items-center gap-3"
             onClick={() => setIsMenuOpen(false)}
           >
-            <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-100 transition group-hover:-translate-y-0.5 dark:shadow-blue-950/40">
-              <Store size={21} className="text-white" strokeWidth={2.4} />
-
-              <span className="absolute right-[-2px] top-[-2px] h-3 w-3 rounded-full border-2 border-white bg-blue-900 dark:border-slate-950" />
-            </div>
-
-            <div className="hidden sm:block">
-              <div className="text-[18px] font-black tracking-tight text-slate-950 dark:text-white">
-                Campus
-                <span className="text-blue-600 dark:text-blue-400">Mart</span>
-                <span className="ml-1 text-xs text-indigo-500 dark:text-indigo-400">
-                  AI
-                </span>
-              </div>
-
-              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                Campus Marketplace
-              </div>
-            </div>
+            <img
+              src="./image1.png" // ছবিটি আপনার public ফোল্ডারে থাকলে এই পাথ ঠিক আছে
+              alt="CampusMart Logo"
+              className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
           </Link>
 
           {/* DESKTOP NAV */}
 
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav className="hidden items-center gap-7 lg:flex ml-4">
             <NavLink to="/" className={navLinkClass}>
               Home
             </NavLink>
@@ -245,11 +230,6 @@ function Navbar() {
               onClick={toggleTheme}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-slate-800 dark:hover:text-blue-400"
               title={
-                theme === "dark" ?
-                  "Switch to light mode"
-                : "Switch to dark mode"
-              }
-              aria-label={
                 theme === "dark" ?
                   "Switch to light mode"
                 : "Switch to dark mode"

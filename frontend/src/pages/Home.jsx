@@ -194,27 +194,40 @@ function Home() {
             <div>
               {/* BRAND */}
 
-              <div className="mb-7 inline-flex items-center gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-blue-950/40">
-                  <ShoppingBag size={28} className="text-white" />
-                </div>
+<div className="mb-7 inline-flex items-center gap-3">
+  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 shadow-lg shadow-blue-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:shadow-blue-950/40">
+    <Store
+      size={27}
+      strokeWidth={2.2}
+      className="text-white"
+    />
 
-                <div>
-                  <p className="text-[25px] font-extrabold tracking-tight text-slate-950 dark:text-white">
-                    Campus
-                    <span className="text-blue-600 dark:text-blue-400">
-                      Mart
-                    </span>
-                    <span className="ml-1.5 text-sm font-bold text-indigo-500 dark:text-indigo-400">
-                      AI
-                    </span>
-                  </p>
+    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white dark:border-slate-900 dark:bg-slate-900">
+      <Sparkles
+        size={11}
+        strokeWidth={2.5}
+        className="text-indigo-600 dark:text-indigo-400"
+      />
+    </span>
+  </div>
 
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-                    Campus Marketplace
-                  </p>
-                </div>
-              </div>
+  <div>
+    {/* <p className="text-[25px] font-extrabold tracking-tight text-slate-950 dark:text-white">
+      Campus
+      <span className="text-blue-600 dark:text-blue-400">
+        Mart
+      </span> */}
+
+      {/* <span className="ml-1.5 rounded-md bg-indigo-50 px-1.5 py-0.5 text-sm font-black text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+        AI
+      </span> */}
+    {/* </p> */}
+
+    {/* <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+      Campus Marketplace
+    </p> */}
+  </div>
+</div>
 
               {/* TITLE */}
 
