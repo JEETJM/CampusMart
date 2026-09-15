@@ -158,7 +158,7 @@ function Navbar() {
             onClick={() => setIsMenuOpen(false)}
           >
             <img
-              src="./image1.png" // ছবিটি আপনার public ফোল্ডারে থাকলে এই পাথ ঠিক আছে
+              src="/image1.png" // ছবিটি আপনার public ফোল্ডারে থাকলে এই পাথ ঠিক আছে
               alt="CampusMart Logo"
               className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
