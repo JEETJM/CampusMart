@@ -20,6 +20,8 @@ import MyOrders from "./pages/MyOrders";
 import SellerOrders from "./pages/SellerOrders";
 import OrderDetails from "./pages/OrderDetails";
 import Chat from "./pages/Chat";
+import MyRentals from "./pages/MyRentals";
+import RentalRequests from "./pages/RentalRequests";
 import EditProfile from "./pages/EditProfile";
 import MyExchangeOffers from "./pages/MyExchangeOffers";
 import ExchangeOffers from "./pages/ExchangeOffers";
@@ -51,6 +53,10 @@ function App() {
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+
+          <Route path="/my-rentals" element={<MyRentals />} />
+
+          <Route path="/rental-requests" element={<RentalRequests />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/seller-orders" element={<SellerOrders />} />
           <Route path="/wishlist" element={<Wishlist />} />

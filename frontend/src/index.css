@@ -1,15 +1,70 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =========================================================
+   CAMPUSMART GLOBAL THEME
+========================================================= */
+
+:root {
+  color-scheme: light;
+
+  --cm-bg: #f7f9fc;
+  --cm-surface: #ffffff;
+  --cm-surface-2: #f8fafc;
+
+  --cm-border: #e2e8f0;
+  --cm-border-soft: #edf2f7;
+
+  --cm-text: #0f172a;
+  --cm-text-2: #475569;
+  --cm-text-3: #94a3b8;
+
+  --cm-primary: #2563eb;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --cm-bg: #070d18;
+  --cm-surface: #101827;
+  --cm-surface-2: #151f31;
+
+  --cm-border: #273449;
+  --cm-border-soft: #1c293b;
+
+  --cm-text: #f8fafc;
+  --cm-text-2: #cbd5e1;
+  --cm-text-3: #7f8da3;
+
+  --cm-primary: #3b82f6;
+}
+
+/* =========================================================
+   BASE
+========================================================= */
+
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 html {
+  background: var(--cm-bg);
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
+  min-width: 320px;
+  background: var(--cm-bg);
+  color: var(--cm-text);
+
   font-family:
     Inter,
     system-ui,
@@ -17,8 +72,10 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 button,
@@ -33,16 +90,511 @@ button {
 }
 
 a {
-  text-decoration: none;
   color: inherit;
+  text-decoration: none;
 }
 
 img {
-  max-width: 100%;
   display: block;
+  max-width: 100%;
 }
 
 ::selection {
-  background: #dbeafe;
+  background: #bfdbfe;
   color: #1e3a8a;
+}
+
+html.dark ::selection {
+  background: #1e40af;
+  color: #eff6ff;
+}
+
+/* =========================================================
+   UNIVERSAL LIGHT MODE
+========================================================= */
+
+/*
+  These rules make sure components which accidentally use
+  dark Tailwind surfaces don't remain black in Light mode.
+*/
+
+html:not(.dark) {
+  background: #f7f9fc;
+}
+
+html:not(.dark) body,
+html:not(.dark) #root {
+  background: #f7f9fc;
+  color: #0f172a;
+}
+
+/* =========================================================
+   UNIVERSAL DARK MODE
+========================================================= */
+
+html.dark body,
+html.dark #root {
+  background: #070d18;
+  color: #f8fafc;
+}
+
+/* =========================================================
+   STANDARD LIGHT SURFACES
+========================================================= */
+
+html.dark .bg-white {
+  background-color: #101827 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #070d18 !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #151f31 !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #223047 !important;
+}
+
+/* =========================================================
+   STANDARD DARK SURFACES IN LIGHT MODE
+========================================================= */
+
+/* Prevent unwanted black blocks in Light Mode */
+
+html:not(.dark) .bg-slate-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* =========================================================
+   DARK SURFACES
+========================================================= */
+
+html.dark .bg-slate-900 {
+  background-color: #0b1220 !important;
+}
+
+html.dark .bg-slate-950 {
+  background-color: #020617 !important;
+}
+
+/* =========================================================
+   GLASS / WHITE TRANSPARENCY
+========================================================= */
+
+html.dark .bg-white\/95 {
+  background-color: rgba(16, 24, 39, 0.95) !important;
+}
+
+html.dark .bg-white\/90 {
+  background-color: rgba(16, 24, 39, 0.9) !important;
+}
+
+html.dark .bg-white\/80 {
+  background-color: rgba(16, 24, 39, 0.8) !important;
+}
+
+html.dark .bg-white\/70 {
+  background-color: rgba(16, 24, 39, 0.7) !important;
+}
+
+/* =========================================================
+   TEXT
+========================================================= */
+
+html.dark .text-slate-950 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #7f8da3 !important;
+}
+
+html.dark .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+/* Light mode protection for dark text */
+
+html:not(.dark) .text-white {
+  color: #ffffff;
+}
+
+/* =========================================================
+   BORDERS
+========================================================= */
+
+html.dark .border-slate-100 {
+  border-color: #1c293b !important;
+}
+
+html.dark .border-slate-200 {
+  border-color: #273449 !important;
+}
+
+html.dark .border-slate-300 {
+  border-color: #3a4a61 !important;
+}
+
+html.dark .border-blue-100 {
+  border-color: rgba(59, 130, 246, 0.18) !important;
+}
+
+html.dark .border-blue-200 {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* =========================================================
+   SOFT COLORS -> DARK
+========================================================= */
+
+html.dark .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+html.dark .bg-blue-100 {
+  background-color: rgba(37, 99, 235, 0.16) !important;
+}
+
+html.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.10) !important;
+}
+
+html.dark .bg-violet-50 {
+  background-color: rgba(139, 92, 246, 0.10) !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-green-50 {
+  background-color: rgba(16, 185, 129, 0.10) !important;
+}
+
+html.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.10) !important;
+}
+
+html.dark .bg-sky-50 {
+  background-color: rgba(14, 165, 233, 0.10) !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.10) !important;
+}
+
+html.dark .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.10) !important;
+}
+
+html.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.10) !important;
+}
+
+/* =========================================================
+   COLORS
+========================================================= */
+
+html.dark .text-blue-600,
+html.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+html.dark .text-indigo-600 {
+  color: #818cf8 !important;
+}
+
+html.dark .text-violet-600 {
+  color: #a78bfa !important;
+}
+
+html.dark .text-emerald-600,
+html.dark .text-green-600 {
+  color: #34d399 !important;
+}
+
+html.dark .text-emerald-700,
+html.dark .text-green-700 {
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-rose-600 {
+  color: #fb7185 !important;
+}
+
+html.dark .text-sky-600 {
+  color: #38bdf8 !important;
+}
+
+html.dark .text-amber-600 {
+  color: #fbbf24 !important;
+}
+
+html.dark .text-amber-700 {
+  color: #fcd34d !important;
+}
+
+html.dark .text-orange-600 {
+  color: #fb923c !important;
+}
+
+html.dark .text-red-600 {
+  color: #f87171 !important;
+}
+
+html.dark .text-red-700 {
+  color: #fca5a5 !important;
+}
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0d1625 !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  border-color: #3b82f6 !important;
+}
+
+html.dark option {
+  background: #0d1625;
+  color: #f8fafc;
+}
+
+/* =========================================================
+   HOVER
+========================================================= */
+
+html.dark .hover\:bg-white:hover {
+  background-color: #151f31 !important;
+}
+
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #151f31 !important;
+}
+
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #1c293b !important;
+}
+
+html.dark .hover\:bg-blue-50:hover {
+  background-color: rgba(37, 99, 235, 0.14) !important;
+}
+
+html.dark .hover\:bg-red-50:hover {
+  background-color: rgba(239, 68, 68, 0.10) !important;
+}
+
+/* =========================================================
+   GRADIENT WHITE SURFACES
+========================================================= */
+
+html.dark .from-white {
+  --tw-gradient-from: #101827 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(16 24 39 / 0) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .via-white {
+  --tw-gradient-to: rgb(16 24 39 / 0) var(--tw-gradient-to-position) !important;
+
+  --tw-gradient-stops:
+    var(--tw-gradient-from),
+    #101827 var(--tw-gradient-via-position),
+    var(--tw-gradient-to) !important;
+}
+
+html.dark .to-white {
+  --tw-gradient-to: #101827 var(--tw-gradient-to-position) !important;
+}
+
+html.dark .from-blue-50 {
+  --tw-gradient-from: rgba(
+      37,
+      99,
+      235,
+      0.10
+    )
+    var(--tw-gradient-from-position) !important;
+}
+
+html.dark .to-indigo-50 {
+  --tw-gradient-to: rgba(
+      99,
+      102,
+      241,
+      0.10
+    )
+    var(--tw-gradient-to-position) !important;
+}
+
+/* =========================================================
+   COMMON CUSTOM LIGHT BACKGROUNDS
+========================================================= */
+
+html.dark [class*="bg-[#f6f8fc]"],
+html.dark [class*="bg-[#f7f9fc]"],
+html.dark [class*="bg-[#f8fafc]"] {
+  background-color: #070d18 !important;
+}
+
+html.dark [class*="bg-[#eaf5ff]"],
+html.dark [class*="bg-[#eff6ff]"] {
+  background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+/* =========================================================
+   SHADOW
+========================================================= */
+
+html.dark .shadow-sm {
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25) !important;
+}
+
+html.dark .shadow-md {
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .shadow-lg {
+  box-shadow:
+    0 14px 35px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* =========================================================
+   MAPBOX
+========================================================= */
+
+html.dark .mapboxgl-ctrl-group {
+  background: #111827 !important;
+  border-color: #334155 !important;
+}
+
+html.dark .mapboxgl-ctrl-group button {
+  filter: invert(1);
+}
+
+html.dark .mapboxgl-popup-content {
+  background: #111827 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .mapboxgl-popup-tip {
+  border-top-color: #111827 !important;
+  border-bottom-color: #111827 !important;
+}
+
+/* =========================================================
+   MODAL BACKDROPS
+========================================================= */
+
+html.dark .bg-slate-950\/50 {
+  background-color: rgba(2, 6, 23, 0.78) !important;
+}
+
+html.dark .bg-slate-950\/60 {
+  background-color: rgba(2, 6, 23, 0.82) !important;
+}
+
+/* =========================================================
+   TABLE / DIVIDER
+========================================================= */
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1c293b !important;
+}
+
+html.dark td {
+  border-color: #273449 !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+html.dark * {
+  scrollbar-color: #475569 transparent;
+}
+
+/* =========================================================
+   SMOOTH THEME TRANSITION
+========================================================= */
+
+body,
+header,
+main,
+section,
+article,
+aside,
+footer,
+button,
+input,
+textarea,
+select,
+a {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
 }

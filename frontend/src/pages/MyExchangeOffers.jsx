@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRightLeft, CheckCircle2, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+} from "lucide-react";
 
 import api from "../services/api";
 
@@ -9,12 +15,15 @@ const MyExchangeOffers = () => {
 
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("campusmart_token");
 
     if (!token) {
-      navigate("/login", { replace: true });
+      navigate("/login", {
+        replace: true,
+      });
       return;
     }
 
@@ -35,20 +44,78 @@ const MyExchangeOffers = () => {
 
   const cancelOffer = async (id) => {
     try {
-      await api.put(`/exchange/${id}/cancel`);
+      setActionLoading(id);
+
+      const response = await api.put(`/exchange/${id}/cancel`);
+
+      const updatedOffer = response.data?.offer;
 
       setOffers((current) =>
         current.map((offer) =>
           offer._id === id ?
             {
               ...offer,
-              status: "Cancelled",
+              status: updatedOffer?.status || "Cancelled",
             }
           : offer,
         ),
       );
     } catch (error) {
       alert(error.response?.data?.message || "Unable to cancel offer.");
+    } finally {
+      setActionLoading("");
+    }
+  };
+
+  const acceptCounter = async (id) => {
+    try {
+      setActionLoading(id);
+
+      const response = await api.put(`/exchange/${id}/accept-counter`);
+
+      const updatedOffer = response.data?.offer;
+
+      setOffers((current) =>
+        current.map((offer) =>
+          offer._id === id ?
+            {
+              ...offer,
+              ...updatedOffer,
+            }
+          : offer,
+        ),
+      );
+
+      alert("Counter offer accepted successfully.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Unable to accept counter offer.");
+    } finally {
+      setActionLoading("");
+    }
+  };
+
+  const rejectCounter = async (id) => {
+    try {
+      setActionLoading(id);
+
+      const response = await api.put(`/exchange/${id}/reject-counter`);
+
+      const updatedOffer = response.data?.offer;
+
+      setOffers((current) =>
+        current.map((offer) =>
+          offer._id === id ?
+            {
+              ...offer,
+              ...updatedOffer,
+            }
+          : offer,
+        ),
+      );
+    } catch (error) {
+      alert(error.response?.data?.message || "Unable to reject counter offer.");
+    } finally {
+      setActionLoading("");
     }
   };
 
@@ -63,6 +130,10 @@ const MyExchangeOffers = () => {
 
     if (status === "Countered") {
       return "bg-violet-50 text-violet-700";
+    }
+
+    if (status === "Completed") {
+      return "bg-blue-50 text-blue-700";
     }
 
     return "bg-amber-50 text-amber-700";
@@ -101,7 +172,7 @@ const MyExchangeOffers = () => {
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Track products you have offered for exchange.
+              Track your exchange requests and counter offers.
             </p>
           </div>
         </div>
@@ -214,7 +285,7 @@ const MyExchangeOffers = () => {
                 {offer.message && (
                   <div className="mt-4 rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-semibold text-slate-400">
-                      Message
+                      Your Message
                     </p>
 
                     <p className="mt-1 text-sm text-slate-600">
@@ -223,20 +294,110 @@ const MyExchangeOffers = () => {
                   </div>
                 )}
 
+                {offer.status === "Countered" && offer.counterProduct && (
+                  <div className="mt-5 rounded-3xl border border-violet-200 bg-violet-50 p-5">
+                    <div className="flex items-center gap-2">
+                      <RotateCcw className="h-5 w-5 text-violet-700" />
+
+                      <h3 className="font-bold text-violet-900">
+                        Seller sent a counter offer
+                      </h3>
+                    </div>
+
+                    <div className="mt-4 flex gap-4">
+                      <img
+                        src={
+                          offer.counterProduct?.images?.[0] ||
+                          "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+                        }
+                        alt={offer.counterProduct?.title}
+                        className="h-20 w-20 rounded-2xl object-cover"
+                      />
+
+                      <div>
+                        <p className="font-bold text-slate-900">
+                          {offer.counterProduct?.title}
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          ₹
+                          {offer.counterProduct?.price?.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+
+                    {offer.counterMessage && (
+                      <div className="mt-4 rounded-2xl bg-white p-4">
+                        <p className="text-xs font-semibold text-slate-400">
+                          Seller Message
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-600">
+                          {offer.counterMessage}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button
+                        onClick={() => acceptCounter(offer._id)}
+                        disabled={actionLoading === offer._id}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Accept Counter
+                      </button>
+
+                      <button
+                        onClick={() => rejectCounter(offer._id)}
+                        disabled={actionLoading === offer._id}
+                        className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject Counter
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {offer.status === "Pending" && (
                   <button
                     onClick={() => cancelOffer(offer._id)}
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    disabled={actionLoading === offer._id}
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     <XCircle className="h-4 w-4" />
                     Cancel Offer
                   </button>
                 )}
 
+                {offer.status === "Countered" && (
+                  <button
+                    onClick={() => cancelOffer(offer._id)}
+                    disabled={actionLoading === offer._id}
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancel Exchange
+                  </button>
+                )}
+
                 {offer.status === "Accepted" && (
                   <div className="mt-5 flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
                     <CheckCircle2 className="h-5 w-5" />
-                    Seller accepted your exchange offer.
+                    Exchange accepted successfully.
+                  </div>
+                )}
+
+                {offer.status === "Rejected" && (
+                  <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
+                    This exchange offer was rejected.
+                  </div>
+                )}
+
+                {offer.status === "Cancelled" && (
+                  <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+                    This exchange offer was cancelled.
                   </div>
                 )}
               </div>

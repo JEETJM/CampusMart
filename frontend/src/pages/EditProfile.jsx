@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   BadgeCheck,
   Camera,
   CheckCircle2,
   Mail,
-  MapPin,
   Save,
   ShieldCheck,
   User,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import api from "../services/api";
+import LocationPicker from "../components/LocationPicker";
 
 function EditProfile() {
   const navigate = useNavigate();
@@ -23,9 +24,7 @@ function EditProfile() {
   const fileInputRef = useRef(null);
 
   const [user, setUser] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -35,6 +34,8 @@ function EditProfile() {
     location: "",
   });
 
+  const [locationCoordinates, setLocationCoordinates] = useState(null);
+
   const [preview, setPreview] = useState("");
 
   const [selectedFile, setSelectedFile] = useState(null);
@@ -43,9 +44,9 @@ function EditProfile() {
 
   const [error, setError] = useState("");
 
-  // ==========================================
-  // LOAD USER
-  // ==========================================
+  /* =========================================================
+     LOAD USER
+  ========================================================= */
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -60,6 +61,8 @@ function EditProfile() {
       }
 
       try {
+        setLoading(true);
+
         const response = await api.get("/auth/me");
 
         const currentUser = response.data?.user;
@@ -78,6 +81,26 @@ function EditProfile() {
         });
 
         setPreview(currentUser.profileImage || "");
+
+        /* =====================================================
+           EXISTING LOCATION COORDINATES
+        ===================================================== */
+
+        if (
+          currentUser.locationCoordinates &&
+          typeof currentUser.locationCoordinates === "object"
+        ) {
+          const lat = Number(currentUser.locationCoordinates.lat);
+
+          const lng = Number(currentUser.locationCoordinates.lng);
+
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setLocationCoordinates({
+              lat,
+              lng,
+            });
+          }
+        }
 
         localStorage.setItem("campusmart_user", JSON.stringify(currentUser));
       } catch (err) {
@@ -98,9 +121,9 @@ function EditProfile() {
     fetchUser();
   }, [navigate]);
 
-  // ==========================================
-  // HANDLE INPUT
-  // ==========================================
+  /* =========================================================
+     INPUT CHANGE
+  ========================================================= */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -114,9 +137,9 @@ function EditProfile() {
     setSuccess("");
   };
 
-  // ==========================================
-  // IMAGE SELECT
-  // ==========================================
+  /* =========================================================
+     IMAGE SELECT
+  ========================================================= */
 
   const handleImageChange = (event) => {
     const file = event.target.files?.[0];
@@ -147,9 +170,9 @@ function EditProfile() {
     setPreview(objectUrl);
   };
 
-  // ==========================================
-  // REMOVE NEW PHOTO
-  // ==========================================
+  /* =========================================================
+     REMOVE NEW IMAGE
+  ========================================================= */
 
   const handleRemoveSelectedImage = () => {
     setSelectedFile(null);
@@ -161,9 +184,9 @@ function EditProfile() {
     }
   };
 
-  // ==========================================
-  // SAVE
-  // ==========================================
+  /* =========================================================
+     SAVE PROFILE
+  ========================================================= */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -173,6 +196,22 @@ function EditProfile() {
 
     if (!formData.name.trim()) {
       setError("Full name is required.");
+
+      return;
+    }
+
+    if (!formData.location.trim()) {
+      setError("Please select your location.");
+
+      return;
+    }
+
+    if (
+      !locationCoordinates ||
+      !Number.isFinite(Number(locationCoordinates.lat)) ||
+      !Number.isFinite(Number(locationCoordinates.lng))
+    ) {
+      setError("Please select a valid location or use your current location.");
 
       return;
     }
@@ -189,6 +228,22 @@ function EditProfile() {
       data.append("college", formData.college.trim());
 
       data.append("location", formData.location.trim());
+
+      /* =====================================================
+         LOCATION COORDINATES
+      ===================================================== */
+
+      data.append(
+        "locationCoordinates",
+        JSON.stringify({
+          lat: Number(locationCoordinates.lat),
+          lng: Number(locationCoordinates.lng),
+        }),
+      );
+
+      /* =====================================================
+         PROFILE IMAGE
+      ===================================================== */
 
       if (selectedFile) {
         data.append("profileImage", selectedFile);
@@ -217,14 +272,33 @@ function EditProfile() {
 
       setPreview(updatedUser.profileImage || "");
 
+      /* =====================================================
+         UPDATED COORDINATES
+      ===================================================== */
+
+      if (updatedUser.locationCoordinates) {
+        const lat = Number(updatedUser.locationCoordinates.lat);
+
+        const lng = Number(updatedUser.locationCoordinates.lng);
+
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          setLocationCoordinates({
+            lat,
+            lng,
+          });
+        }
+      }
+
       setSelectedFile(null);
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
 
-      // VERY IMPORTANT
-      // Keep localStorage synchronized
+      /* =====================================================
+         LOCAL STORAGE
+      ===================================================== */
+
       localStorage.setItem("campusmart_user", JSON.stringify(updatedUser));
 
       setSuccess("Profile updated successfully.");
@@ -243,17 +317,17 @@ function EditProfile() {
     }
   };
 
-  // ==========================================
-  // LOADING
-  // ==========================================
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 dark:bg-[#070d18]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl dark:border-slate-800 dark:bg-slate-900">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 dark:border-slate-700 dark:border-t-blue-500" />
 
-          <p className="mt-4 text-sm font-semibold text-slate-600">
+          <p className="mt-4 text-sm font-semibold text-slate-600 dark:text-slate-400">
             Loading profile...
           </p>
         </div>
@@ -262,16 +336,16 @@ function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f8fc]">
-      {/* ======================================
+    <div className="min-h-screen bg-[#f6f8fc] text-slate-900 dark:bg-[#070d18] dark:text-slate-100">
+      {/* =====================================================
           HEADER
-      ======================================= */}
+      ===================================================== */}
 
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link
             to="/profile"
-            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <ArrowLeft size={17} />
             Back to Profile
@@ -284,31 +358,31 @@ function EditProfile() {
         </div>
       </header>
 
-      {/* ======================================
+      {/* =====================================================
           MAIN
-      ======================================= */}
+      ===================================================== */}
 
       <main className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:py-10">
         {/* TITLE */}
 
         <div className="mb-7">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
             Account Settings
           </p>
 
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
             Edit Profile
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Update your student identity, profile image, and campus information.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+            Update your student identity, profile image, and campus location.
           </p>
         </div>
 
         {/* SUCCESS */}
 
         {success && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle2 size={18} />
 
             {success}
@@ -318,13 +392,13 @@ function EditProfile() {
         {/* ERROR */}
 
         {error && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-700">
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
             <span>{error}</span>
 
             <button
               type="button"
               onClick={() => setError("")}
-              className="rounded-lg p-1 transition hover:bg-red-100"
+              className="rounded-lg p-1 transition hover:bg-red-100 dark:hover:bg-red-500/10"
             >
               <X size={16} />
             </button>
@@ -335,18 +409,18 @@ function EditProfile() {
           onSubmit={handleSubmit}
           className="grid gap-7 lg:grid-cols-[310px_minmax(0,1fr)]"
         >
-          {/* ==================================
+          {/* =================================================
               PROFILE IMAGE CARD
-          =================================== */}
+          ================================================== */}
 
-          <section className="h-fit overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)]">
+          <section className="h-fit overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_60px_-40px_rgba(0,0,0,0.65)]">
             <div className="h-28 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900" />
 
             <div className="-mt-14 px-6 pb-6">
               {/* IMAGE */}
 
               <div className="relative mx-auto h-28 w-28">
-                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-gradient-to-br from-blue-100 to-indigo-100 shadow-xl">
+                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-gradient-to-br from-blue-100 to-indigo-100 shadow-xl dark:border-slate-800 dark:from-slate-800 dark:to-slate-700">
                   {preview ?
                     <img
                       src={preview}
@@ -356,7 +430,7 @@ function EditProfile() {
                   : <User
                       size={46}
                       strokeWidth={1.5}
-                      className="text-blue-600"
+                      className="text-blue-600 dark:text-blue-400"
                     />
                   }
                 </div>
@@ -364,23 +438,23 @@ function EditProfile() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg ring-4 ring-white transition hover:bg-blue-600"
+                  className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg ring-4 ring-white transition hover:bg-blue-600 dark:ring-slate-900"
                 >
                   <Camera size={17} />
                 </button>
               </div>
 
               <div className="mt-5 text-center">
-                <h2 className="font-bold text-slate-950">
+                <h2 className="font-bold text-slate-950 dark:text-white">
                   {user?.name || "Your Name"}
                 </h2>
 
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   CampusMart Student
                 </p>
 
                 {user?.isVerified && (
-                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
                     <BadgeCheck size={14} />
                     Verified Student
                   </div>
@@ -398,7 +472,7 @@ function EditProfile() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
               >
                 <Camera size={16} />
                 Change Photo
@@ -408,25 +482,25 @@ function EditProfile() {
                 <button
                   type="button"
                   onClick={handleRemoveSelectedImage}
-                  className="mt-2 w-full rounded-xl px-4 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                  className="mt-2 w-full rounded-xl px-4 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
                 >
                   Remove New Photo
                 </button>
               )}
 
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                 <div className="flex gap-3">
                   <ShieldCheck
                     size={18}
-                    className="shrink-0 text-emerald-600"
+                    className="shrink-0 text-emerald-600 dark:text-emerald-400"
                   />
 
                   <div>
-                    <p className="text-xs font-bold text-slate-900">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
                       Profile security
                     </p>
 
-                    <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                    <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
                       JPG, PNG or WEBP. Maximum 5MB.
                     </p>
                   </div>
@@ -435,21 +509,21 @@ function EditProfile() {
             </div>
           </section>
 
-          {/* ==================================
+          {/* =================================================
               FORM CARD
-          =================================== */}
+          ================================================== */}
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] sm:p-8">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_60px_-40px_rgba(0,0,0,0.65)] sm:p-8">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
                 Student Information
               </p>
 
-              <h2 className="mt-1 text-xl font-bold text-slate-950">
+              <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
                 Personal Details
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Keep your CampusMart profile accurate.
               </p>
             </div>
@@ -458,7 +532,7 @@ function EditProfile() {
               {/* NAME */}
 
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Full Name
                 </label>
 
@@ -474,7 +548,7 @@ function EditProfile() {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Enter your full name"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
@@ -482,7 +556,7 @@ function EditProfile() {
               {/* EMAIL */}
 
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Email Address
                 </label>
 
@@ -496,7 +570,7 @@ function EditProfile() {
                     type="email"
                     value={user?.email || ""}
                     disabled
-                    className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-500 outline-none"
+                    className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
                   />
                 </div>
 
@@ -508,7 +582,7 @@ function EditProfile() {
               {/* STUDENT ID */}
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Student ID
                 </label>
 
@@ -524,7 +598,7 @@ function EditProfile() {
                     value={formData.studentId}
                     onChange={handleChange}
                     placeholder="Student ID"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
@@ -532,7 +606,7 @@ function EditProfile() {
               {/* COLLEGE */}
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   College
                 </label>
 
@@ -548,42 +622,80 @@ function EditProfile() {
                     value={formData.college}
                     onChange={handleChange}
                     placeholder="Your college"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
-              {/* LOCATION */}
+              {/* =================================================
+                  CURRENT LOCATION
+              ================================================== */}
 
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Location
-                </label>
+                <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Campus / Pickup Location
+                    </label>
 
-                <div className="relative">
-                  <MapPin
-                    size={18}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Search your location or use your current location.
+                    </p>
+                  </div>
 
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="Campus / city / pickup location"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                  />
+                  {locationCoordinates && (
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      Location coordinates saved
+                    </span>
+                  )}
                 </div>
+
+                <LocationPicker
+                  value={formData.location}
+                  onChange={(location) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      location,
+                    }));
+
+                    setError("");
+                    setSuccess("");
+                  }}
+                  coordinates={locationCoordinates}
+                  onCoordinatesChange={(coordinates) => {
+                    setLocationCoordinates(coordinates);
+
+                    setError("");
+                    setSuccess("");
+                  }}
+                  placeholder="Search campus, building, street or area"
+                  showMap={true}
+                />
+
+                {locationCoordinates && (
+                  <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 dark:border-blue-500/20 dark:bg-blue-500/10">
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                      <span>
+                        Latitude: {Number(locationCoordinates.lat).toFixed(6)}
+                      </span>
+
+                      <span>
+                        Longitude: {Number(locationCoordinates.lng).toFixed(6)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* SAVE BUTTON */}
+            {/* =================================================
+                SAVE
+            ================================================== */}
 
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
+            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 dark:border-slate-800 sm:flex-row sm:justify-end">
               <Link
                 to="/profile"
-                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancel
               </Link>
@@ -591,11 +703,11 @@ function EditProfile() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-950/10 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-950/10 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-500 dark:hover:text-white"
               >
                 {saving ?
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white dark:border-slate-950/30 dark:border-t-slate-950" />
                     Saving Changes...
                   </>
                 : <>

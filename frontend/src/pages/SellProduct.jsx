@@ -9,9 +9,13 @@ import {
   ShieldCheck,
   Sparkles,
   Loader2,
+  CalendarDays,
+  Banknote,
+  Clock3,
 } from "lucide-react";
 
 import api from "../services/api";
+import LocationPicker from "../components/LocationPicker";
 
 const categories = [
   "Books",
@@ -39,14 +43,24 @@ function SellProduct() {
     price: "",
     condition: "Good",
     listingType: "Sell",
-    location: "Campus Pickup",
+    location: "",
+
+    // Rental fields
+    rentalPricePerDay: "",
+    rentalDeposit: "",
+    minimumRentalDays: "1",
+    maximumRentalDays: "30",
+    rentalInstructions: "",
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [locationCoordinates, setLocationCoordinates] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+
+  const isRent = formData.listingType === "Rent";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,6 +69,21 @@ function SellProduct() {
       ...prev,
       [name]: value,
     }));
+
+    if (message) {
+      setMessage("");
+    }
+  };
+
+  const handleListingTypeChange = (e) => {
+    const value = e.target.value;
+
+    setFormData((prev) => ({
+      ...prev,
+      listingType: value,
+    }));
+
+    setMessage("");
   };
 
   const handleImageChange = (e) => {
@@ -124,9 +153,44 @@ function SellProduct() {
       return;
     }
 
-    if (!formData.price || Number(formData.price) < 0) {
-      setMessage("Please enter a valid price.");
+    if (formData.price === "" || Number(formData.price) < 0) {
+      setMessage("Please enter a valid product price.");
       return;
+    }
+    if (!formData.location.trim()) {
+  setMessage("Please select a pickup location.");
+  return;
+}
+
+    // Rental validation
+    if (isRent) {
+      if (
+        formData.rentalPricePerDay === "" ||
+        Number(formData.rentalPricePerDay) <= 0
+      ) {
+        setMessage("Please enter a valid rental price per day.");
+        return;
+      }
+
+      if (formData.rentalDeposit === "" || Number(formData.rentalDeposit) < 0) {
+        setMessage("Please enter a valid rental security deposit.");
+        return;
+      }
+
+      const minimumDays = Number(formData.minimumRentalDays);
+      const maximumDays = Number(formData.maximumRentalDays);
+
+      if (!minimumDays || minimumDays < 1) {
+        setMessage("Minimum rental days must be at least 1.");
+        return;
+      }
+
+      if (!maximumDays || maximumDays < minimumDays) {
+        setMessage(
+          "Maximum rental days must be greater than or equal to minimum rental days.",
+        );
+        return;
+      }
     }
 
     try {
@@ -143,7 +207,7 @@ function SellProduct() {
         setUploading(false);
       }
 
-      const response = await api.post("/products", {
+      const productPayload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         category: formData.category,
@@ -151,8 +215,32 @@ function SellProduct() {
         condition: formData.condition,
         listingType: formData.listingType,
         location: formData.location.trim(),
+
+        locationCoordinates:
+          locationCoordinates ?
+            {
+              lat: Number(locationCoordinates.lat),
+              lng: Number(locationCoordinates.lng),
+            }
+          : null,
+
         images: imageUrl ? [imageUrl] : [],
-      });
+      };
+
+      // Add rental information only for Rent listing
+      if (isRent) {
+        productPayload.rentalPricePerDay = Number(formData.rentalPricePerDay);
+
+        productPayload.rentalDeposit = Number(formData.rentalDeposit);
+
+        productPayload.minimumRentalDays = Number(formData.minimumRentalDays);
+
+        productPayload.maximumRentalDays = Number(formData.maximumRentalDays);
+
+        productPayload.rentalInstructions = formData.rentalInstructions.trim();
+      }
+
+      const response = await api.post("/products", productPayload);
 
       if (response.data.success) {
         setMessage("Product listed successfully.");
@@ -176,6 +264,11 @@ function SellProduct() {
       setSubmitting(false);
     }
   };
+
+  const formattedRentalPrice =
+    formData.rentalPricePerDay ?
+      `₹${Number(formData.rentalPricePerDay).toLocaleString("en-IN")}/day`
+    : "₹0/day";
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -300,7 +393,7 @@ function SellProduct() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                      Price
+                      Product Price
                     </label>
 
                     <div className="relative">
@@ -318,6 +411,13 @@ function SellProduct() {
                         className="w-full rounded-xl border border-slate-300 py-3 pl-9 pr-4 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
                     </div>
+
+                    {isRent && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Enter the approximate product value. Rental pricing is
+                        configured below.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -328,7 +428,7 @@ function SellProduct() {
                     <select
                       name="listingType"
                       value={formData.listingType}
-                      onChange={handleChange}
+                      onChange={handleListingTypeChange}
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     >
                       {listingTypes.map((type) => (
@@ -340,19 +440,166 @@ function SellProduct() {
                   </div>
                 </div>
 
+                {/* Rental Section */}
+                {isRent && (
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+                    <div className="mb-5 flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                        <CalendarDays size={19} />
+                      </div>
+
+                      <div>
+                        <h3 className="font-semibold text-slate-900">
+                          Rental Details
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          Configure your rental pricing, duration and rules.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-5">
+                      {/* Rental Price + Deposit */}
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">
+                            Rental Price / Day
+                          </label>
+
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                              ₹
+                            </span>
+
+                            <input
+                              type="number"
+                              name="rentalPricePerDay"
+                              value={formData.rentalPricePerDay}
+                              onChange={handleChange}
+                              min="1"
+                              placeholder="100"
+                              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-9 pr-4 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">
+                            Security Deposit
+                          </label>
+
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                              ₹
+                            </span>
+
+                            <input
+                              type="number"
+                              name="rentalDeposit"
+                              value={formData.rentalDeposit}
+                              onChange={handleChange}
+                              min="0"
+                              placeholder="500"
+                              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-9 pr-4 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            Refundable security amount.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Rental Days */}
+                      <div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <Clock3 size={17} className="text-blue-600" />
+
+                          <label className="text-sm font-semibold text-slate-700">
+                            Rental Duration
+                          </label>
+                        </div>
+
+                        <div className="grid gap-5 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-2 block text-xs font-medium text-slate-500">
+                              Minimum Days
+                            </label>
+
+                            <input
+                              type="number"
+                              name="minimumRentalDays"
+                              value={formData.minimumRentalDays}
+                              onChange={handleChange}
+                              min="1"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-xs font-medium text-slate-500">
+                              Maximum Days
+                            </label>
+
+                            <input
+                              type="number"
+                              name="maximumRentalDays"
+                              value={formData.maximumRentalDays}
+                              onChange={handleChange}
+                              min="1"
+                              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rental Instructions */}
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-slate-700">
+                          Rental Instructions
+                        </label>
+
+                        <textarea
+                          name="rentalInstructions"
+                          value={formData.rentalInstructions}
+                          onChange={handleChange}
+                          maxLength={1000}
+                          rows={4}
+                          placeholder="Example: Return the item in the same condition. ID verification is required at pickup."
+                          className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+
+                        <p className="mt-1 text-right text-xs text-slate-400">
+                          {formData.rentalInstructions.length}/1000
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Location */}
+                {/* Pickup Location */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Pickup Location
                   </label>
 
-                  <input
-                    type="text"
-                    name="location"
+                  <p className="mb-3 text-sm text-slate-500">
+                    Search your location or use your current location.
+                  </p>
+
+                  <LocationPicker
                     value={formData.location}
-                    onChange={handleChange}
-                    placeholder="Example: Campus Gate"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    onChange={(location) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        location,
+                      }));
+                    }}
+                    coordinates={locationCoordinates}
+                    onCoordinatesChange={setLocationCoordinates}
+                    placeholder="Search campus, building, street or area"
                   />
                 </div>
 
@@ -474,11 +721,31 @@ function SellProduct() {
                       {formData.title || "Your product title"}
                     </p>
 
-                    <p className="mt-2 text-xl font-bold text-blue-600">
-                      {formData.price ?
-                        `₹${Number(formData.price).toLocaleString("en-IN")}`
-                      : "₹0"}
-                    </p>
+                    {isRent ?
+                      <>
+                        <p className="mt-2 text-xl font-bold text-blue-600">
+                          {formattedRentalPrice}
+                        </p>
+
+                        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                          <Banknote size={14} />
+
+                          <span>
+                            Deposit:{" "}
+                            {formData.rentalDeposit ?
+                              `₹${Number(formData.rentalDeposit).toLocaleString(
+                                "en-IN",
+                              )}`
+                            : "₹0"}
+                          </span>
+                        </div>
+                      </>
+                    : <p className="mt-2 text-xl font-bold text-blue-600">
+                        {formData.price ?
+                          `₹${Number(formData.price).toLocaleString("en-IN")}`
+                        : "₹0"}
+                      </p>
+                    }
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       {formData.category && (
@@ -490,10 +757,50 @@ function SellProduct() {
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
                         {formData.condition}
                       </span>
+
+                      <span className="rounded-full bg-blue-100 px-2.5 py-1 font-medium text-blue-700">
+                        {formData.listingType}
+                      </span>
                     </div>
+
+                    {isRent && (
+                      <div className="mt-4 rounded-xl bg-blue-50 p-3">
+                        <p className="text-xs font-semibold text-blue-800">
+                          Rental Duration
+                        </p>
+
+                        <p className="mt-1 text-sm text-blue-700">
+                          {formData.minimumRentalDays || 1} -{" "}
+                          {formData.maximumRentalDays || 30} days
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* Rental Info */}
+              {isRent && (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                      <CalendarDays size={19} />
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-slate-900">
+                        Rental Marketplace
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-6 text-slate-600">
+                        Students will be able to request your product for
+                        specific dates. You can approve, reject and manage
+                        rental requests from your dashboard.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* AI */}
               <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">

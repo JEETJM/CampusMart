@@ -33,6 +33,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
+    // Selling price
     price: {
       type: Number,
       required: true,
@@ -42,22 +43,13 @@ const productSchema = new mongoose.Schema(
     condition: {
       type: String,
       required: true,
-      enum: [
-        "New",
-        "Like New",
-        "Good",
-        "Fair",
-      ],
+      enum: ["New", "Like New", "Good", "Fair"],
       default: "Good",
     },
 
     listingType: {
       type: String,
-      enum: [
-        "Sell",
-        "Rent",
-        "Exchange",
-      ],
+      enum: ["Sell", "Rent", "Exchange"],
       default: "Sell",
     },
 
@@ -72,6 +64,16 @@ const productSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    locationCoordinates: {
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
+    },
 
     seller: {
       type: mongoose.Schema.Types.ObjectId,
@@ -81,8 +83,7 @@ const productSchema = new mongoose.Schema(
 
     college: {
       type: String,
-      default:
-        "Narula Institute of Technology",
+      default: "Narula Institute of Technology",
       trim: true,
     },
 
@@ -90,6 +91,56 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // =====================================================
+    // RENTAL FIELDS
+    // =====================================================
+
+    rentalPricePerDay: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+
+    rentalDeposit: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    minimumRentalDays: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+
+    maximumRentalDays: {
+      type: Number,
+      default: 30,
+      min: 1,
+    },
+
+    rentalInstructions: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: "",
+    },
+
+    // =====================================================
+    // PRODUCT ANALYTICS
+    // =====================================================
 
     views: {
       type: Number,
@@ -100,6 +151,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    // =====================================================
+    // AI FIELDS
+    // =====================================================
 
     aiFairPrice: {
       type: Number,
@@ -122,8 +177,4 @@ const productSchema = new mongoose.Schema(
 );
 
 module.exports =
-  mongoose.models.Product ||
-  mongoose.model(
-    "Product",
-    productSchema,
-  );
+  mongoose.models.Product || mongoose.model("Product", productSchema);

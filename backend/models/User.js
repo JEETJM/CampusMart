@@ -70,6 +70,16 @@ const userSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    locationCoordinates: {
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
+    },
 
     wishlist: [
       {
@@ -92,10 +102,7 @@ const userSchema = new mongoose.Schema(
 
   {
     timestamps: true,
-  }
+  },
 );
 
-module.exports = mongoose.model(
-  "User",
-  userSchema
-);
+module.exports = mongoose.model("User", userSchema);

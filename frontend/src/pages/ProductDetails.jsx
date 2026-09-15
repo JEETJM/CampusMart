@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-
 import {
   ArrowLeft,
   ArrowRight,
   ArrowRightLeft,
   BadgeCheck,
+  CalendarDays,
   CheckCircle2,
   Heart,
   MapPin,
@@ -14,44 +13,100 @@ import {
   ShieldCheck,
   ShoppingCart,
   Sparkles,
+  Star,
   User,
   X,
   XCircle,
 } from "lucide-react";
 
+import { Link, useNavigate, useParams } from "react-router-dom";
+
 import api from "../services/api";
+import ProductReviews from "../components/ProductReviews";
 
 function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  /* =========================================================
+     PRODUCT
+  ========================================================= */
+
   const [product, setProduct] = useState(null);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
   const [selectedImage, setSelectedImage] = useState(0);
 
-  // Wishlist
+  /* =========================================================
+     WISHLIST
+  ========================================================= */
+
   const [isWishlisted, setIsWishlisted] = useState(false);
+
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
-  // Cart / common message
+  /* =========================================================
+     COMMON MESSAGE
+  ========================================================= */
+
   const [cartMessage, setCartMessage] = useState("");
 
-  // Exchange
+  /* =========================================================
+     EXCHANGE
+  ========================================================= */
+
   const [showExchangeModal, setShowExchangeModal] = useState(false);
+
   const [myProducts, setMyProducts] = useState([]);
+
   const [selectedOfferProduct, setSelectedOfferProduct] = useState("");
+
   const [exchangeMessage, setExchangeMessage] = useState("");
+
   const [exchangeLoading, setExchangeLoading] = useState(false);
+
   const [exchangeError, setExchangeError] = useState("");
+
   const [exchangeSuccess, setExchangeSuccess] = useState("");
 
-  /*
-  |--------------------------------------------------------------------------
-  | Fetch Product
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     RENTAL
+  ========================================================= */
+
+  const [rentalStartDate, setRentalStartDate] = useState("");
+
+  const [rentalEndDate, setRentalEndDate] = useState("");
+
+  const [rentalMessage, setRentalMessage] = useState("");
+
+  const [rentalLoading, setRentalLoading] = useState(false);
+
+  const [rentalError, setRentalError] = useState("");
+
+  const [rentalSuccess, setRentalSuccess] = useState("");
+
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  const [rentalAvailability, setRentalAvailability] = useState(null);
+
+  /* =========================================================
+     THEME
+  ========================================================= */
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("campusmart_theme") || "light";
+
+    document.documentElement.classList.remove("light", "dark");
+
+    document.documentElement.classList.add(savedTheme);
+  }, []);
+
+  /* =========================================================
+     FETCH PRODUCT
+  ========================================================= */
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -62,6 +117,8 @@ function ProductDetails() {
         const response = await api.get(`/products/${id}`);
 
         setProduct(response.data?.product || null);
+
+        setSelectedImage(0);
       } catch (error) {
         console.error("Product Details Error:", error);
 
@@ -74,11 +131,9 @@ function ProductDetails() {
     fetchProduct();
   }, [id]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Check Wishlist
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     CHECK WISHLIST
+  ========================================================= */
 
   useEffect(() => {
     const checkWishlist = async () => {
@@ -100,11 +155,9 @@ function ProductDetails() {
     checkWishlist();
   }, [id]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Add To Cart
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     ADD TO CART
+  ========================================================= */
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -112,7 +165,12 @@ function ProductDetails() {
     const token = localStorage.getItem("campusmart_token");
 
     if (!token) {
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
       return;
     }
 
@@ -134,11 +192,9 @@ function ProductDetails() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Chat With Seller
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     CHAT WITH SELLER
+  ========================================================= */
 
   const handleChatWithSeller = async () => {
     if (!product) return;
@@ -146,7 +202,12 @@ function ProductDetails() {
     const token = localStorage.getItem("campusmart_token");
 
     if (!token) {
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
       return;
     }
 
@@ -169,11 +230,9 @@ function ProductDetails() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Wishlist
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     WISHLIST
+  ========================================================= */
 
   const handleWishlist = async () => {
     if (!product) return;
@@ -181,7 +240,12 @@ function ProductDetails() {
     const token = localStorage.getItem("campusmart_token");
 
     if (!token) {
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
       return;
     }
 
@@ -193,6 +257,7 @@ function ProductDetails() {
         await api.delete(`/wishlist/${product._id}`);
 
         setIsWishlisted(false);
+
         setCartMessage("Removed from wishlist.");
       } else {
         await api.post("/wishlist", {
@@ -200,6 +265,7 @@ function ProductDetails() {
         });
 
         setIsWishlisted(true);
+
         setCartMessage("Added to wishlist.");
       }
     } catch (error) {
@@ -213,17 +279,20 @@ function ProductDetails() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Open Exchange Modal
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     OPEN EXCHANGE MODAL
+  ========================================================= */
 
   const openExchangeModal = async () => {
     const token = localStorage.getItem("campusmart_token");
 
     if (!token) {
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
       return;
     }
 
@@ -257,20 +326,20 @@ function ProductDetails() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Send Exchange Offer
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SEND EXCHANGE OFFER
+  ========================================================= */
 
   const handleSendExchangeOffer = async () => {
     if (!selectedOfferProduct) {
       setExchangeError("Please select a product to offer.");
+
       return;
     }
 
     try {
       setExchangeLoading(true);
+
       setExchangeError("");
       setExchangeSuccess("");
 
@@ -287,6 +356,7 @@ function ProductDetails() {
 
       setTimeout(() => {
         setShowExchangeModal(false);
+
         setExchangeSuccess("");
       }, 1200);
     } catch (error) {
@@ -300,29 +370,178 @@ function ProductDetails() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Loading State
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     RENTAL DAYS
+  ========================================================= */
+
+  const rentalDays =
+    rentalStartDate && rentalEndDate ?
+      Math.ceil(
+        (new Date(rentalEndDate) - new Date(rentalStartDate)) /
+          (1000 * 60 * 60 * 24),
+      )
+    : 0;
+
+  const dailyRate = Number(product?.dailyRate || product?.rentalPrice || 0);
+
+  const depositAmount = Number(
+    product?.depositAmount || product?.rentalDeposit || 0,
+  );
+
+  const rentalAmount = rentalDays > 0 ? rentalDays * dailyRate : 0;
+
+  const rentalTotal = rentalAmount + depositAmount;
+
+  /* =========================================================
+     CHECK RENTAL AVAILABILITY
+  ========================================================= */
+
+  const checkRentalAvailability = async () => {
+    if (!rentalStartDate || !rentalEndDate) {
+      setRentalError("Please select start and end dates.");
+
+      return;
+    }
+
+    if (rentalDays <= 0) {
+      setRentalError("End date must be after start date.");
+
+      return;
+    }
+
+    try {
+      setAvailabilityLoading(true);
+
+      setRentalError("");
+
+      const response = await api.get(`/rentals/availability/${product._id}`, {
+        params: {
+          startDate: rentalStartDate,
+          endDate: rentalEndDate,
+        },
+      });
+
+      const available =
+        response.data?.available ?? response.data?.isAvailable ?? false;
+
+      setRentalAvailability(available);
+
+      if (!available) {
+        setRentalError("This product is not available for the selected dates.");
+      }
+    } catch (error) {
+      console.error("Rental Availability Error:", error);
+
+      setRentalAvailability(false);
+
+      setRentalError(
+        error.response?.data?.message || "Unable to check rental availability.",
+      );
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
+  /* =========================================================
+     CREATE RENTAL REQUEST
+  ========================================================= */
+
+  const handleRentNow = async () => {
+    const token = localStorage.getItem("campusmart_token");
+
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+
+      return;
+    }
+
+    if (!rentalStartDate || !rentalEndDate) {
+      setRentalError("Please select rental dates.");
+
+      return;
+    }
+
+    if (rentalDays <= 0) {
+      setRentalError("End date must be after start date.");
+
+      return;
+    }
+
+    try {
+      setRentalLoading(true);
+      setRentalError("");
+      setRentalSuccess("");
+
+      const availability = await api.get(
+        `/rentals/availability/${product._id}`,
+        {
+          params: {
+            startDate: rentalStartDate,
+            endDate: rentalEndDate,
+          },
+        },
+      );
+
+      const isAvailable =
+        availability.data?.available ?? availability.data?.isAvailable ?? false;
+
+      if (!isAvailable) {
+        setRentalAvailability(false);
+
+        setRentalError("This product is not available for the selected dates.");
+
+        return;
+      }
+
+      setRentalAvailability(true);
+
+      await api.post("/rentals", {
+        productId: product._id,
+        startDate: rentalStartDate,
+        endDate: rentalEndDate,
+        renterMessage: rentalMessage.trim(),
+        pickupLocation: product.location || "",
+      });
+
+      setRentalSuccess("Rental request sent successfully.");
+
+      setRentalMessage("");
+    } catch (error) {
+      console.error("Create Rental Error:", error);
+
+      setRentalError(
+        error.response?.data?.message || "Unable to create rental request.",
+      );
+    } finally {
+      setRentalLoading(false);
+    }
+  };
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#070d18]">
         <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-          <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
+          <div className="h-5 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
           <div className="mt-8 grid gap-10 lg:grid-cols-2">
-            <div className="h-[500px] animate-pulse rounded-3xl bg-slate-200" />
+            <div className="h-[500px] animate-pulse rounded-3xl bg-slate-200 dark:bg-slate-800" />
 
             <div className="space-y-5">
-              <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
+              <div className="h-5 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
-              <div className="h-12 w-3/4 animate-pulse rounded bg-slate-200" />
+              <div className="h-12 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
-              <div className="h-8 w-32 animate-pulse rounded bg-slate-200" />
+              <div className="h-8 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
-              <div className="h-32 animate-pulse rounded bg-slate-200" />
+              <div className="h-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
             </div>
           </div>
         </div>
@@ -330,25 +549,23 @@ function ProductDetails() {
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Error State
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     ERROR
+  ========================================================= */
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#070d18]">
         <div className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
             <XCircle size={32} className="text-red-500" />
           </div>
 
-          <h1 className="mt-6 text-2xl font-bold text-slate-950">
+          <h1 className="mt-6 text-2xl font-bold text-slate-950 dark:text-white">
             Product not found
           </h1>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-slate-500 dark:text-slate-400">
             {error || "This product may have been removed."}
           </p>
 
@@ -364,11 +581,9 @@ function ProductDetails() {
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Images
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     IMAGES
+  ========================================================= */
 
   const images =
     product.images?.length > 0 ?
@@ -381,13 +596,21 @@ function ProductDetails() {
 
   const sellerInitial = sellerName.charAt(0).toUpperCase();
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
-        {/* Breadcrumb */}
+  const isRental =
+    product.listingType === "Rent" || product.listingType === "Rental";
 
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-          <Link to="/marketplace" className="transition hover:text-blue-600">
+  return (
+    <div className="min-h-screen bg-[#f7f9fc] text-slate-900 dark:bg-[#070d18] dark:text-slate-100">
+      <main className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+        {/* =================================================
+            BREADCRUMB
+        ================================================== */}
+
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <Link
+            to="/marketplace"
+            className="transition hover:text-blue-600 dark:hover:text-blue-400"
+          >
             Marketplace
           </Link>
 
@@ -397,28 +620,34 @@ function ProductDetails() {
 
           <span>/</span>
 
-          <span className="font-medium text-slate-700">{product.title}</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">
+            {product.title}
+          </span>
         </div>
 
-        {/* Back */}
+        {/* BACK */}
 
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mt-6 flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
+          className="mt-6 flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
         >
           <ArrowLeft size={17} />
           Back
         </button>
 
-        {/* Main Product Section */}
+        {/* =================================================
+            MAIN PRODUCT
+        ================================================== */}
 
         <div className="mt-8 grid gap-10 lg:grid-cols-2">
-          {/* Images */}
+          {/* =================================================
+              IMAGES
+          ================================================== */}
 
           <div>
-            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white">
-              <div className="aspect-square bg-slate-100">
+            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <div className="aspect-square bg-slate-100 dark:bg-slate-800">
                 <img
                   src={images[selectedImage]}
                   alt={product.title}
@@ -430,19 +659,19 @@ function ProductDetails() {
                 />
               </div>
 
-              {/* Listing Type */}
+              {/* LISTING TYPE */}
 
-              <div className="absolute left-5 top-5 rounded-xl bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+              <div className="absolute left-5 top-5 rounded-xl bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/95 dark:text-slate-200">
                 {product.listingType}
               </div>
 
-              {/* Wishlist */}
+              {/* WISHLIST */}
 
               <button
                 type="button"
                 onClick={handleWishlist}
                 disabled={wishlistLoading}
-                className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-900/95"
                 aria-label={
                   isWishlisted ? "Remove from wishlist" : "Add to wishlist"
                 }
@@ -452,13 +681,13 @@ function ProductDetails() {
                   className={
                     isWishlisted ?
                       "fill-red-500 text-red-500"
-                    : "text-slate-700"
+                    : "text-slate-700 dark:text-slate-200"
                   }
                 />
               </button>
             </div>
 
-            {/* Thumbnails */}
+            {/* THUMBNAILS */}
 
             <div className="mt-4 flex gap-3 overflow-x-auto">
               {images.map((image, index) => (
@@ -468,7 +697,7 @@ function ProductDetails() {
                   onClick={() => setSelectedImage(index)}
                   className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 ${
                     selectedImage === index ? "border-blue-600" : (
-                      "border-slate-200"
+                      "border-slate-200 dark:border-slate-700"
                     )
                   }`}
                 >
@@ -482,123 +711,360 @@ function ProductDetails() {
             </div>
           </div>
 
-          {/* Product Information */}
+          {/* =================================================
+              PRODUCT INFO
+          ================================================== */}
 
           <div>
-            {/* Badges */}
+            {/* BADGES */}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-blue-700">
+              <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
                 {product.category}
               </span>
 
-              <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+              <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 {product.condition}
               </span>
 
               {product.seller?.isVerified && (
-                <span className="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                <span className="flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                   <BadgeCheck size={14} />
                   Verified Seller
                 </span>
               )}
             </div>
 
-            {/* Title */}
+            {/* TITLE */}
 
-            <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+            <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950 dark:text-white md:text-4xl">
               {product.title}
             </h1>
 
-            {/* Price */}
+            {/* =================================================
+                PRODUCT RATING
+            ================================================== */}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={16}
+                    strokeWidth={1.8}
+                    className={
+                      star <= Math.round(product.averageRating || 0) ?
+                        "fill-amber-400 text-amber-400"
+                      : "text-slate-300 dark:text-slate-600"
+                    }
+                  />
+                ))}
+              </div>
+
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                {Number(product.averageRating || 0).toFixed(1)}
+              </span>
+
+              <span className="text-xs text-slate-400">
+                ({product.reviewCount || 0} reviews)
+              </span>
+            </div>
+
+            {/* PRICE */}
 
             <div className="mt-5 flex flex-wrap items-end gap-4">
-              <span className="text-4xl font-bold text-slate-950">
+              <span className="text-4xl font-bold text-slate-950 dark:text-white">
                 ₹{Number(product.price || 0).toLocaleString("en-IN")}
               </span>
 
+              {isRental && dailyRate > 0 && (
+                <span className="mb-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                  ₹{dailyRate.toLocaleString("en-IN")} / day
+                </span>
+              )}
+
               {product.aiFairPrice && (
-                <span className="mb-1 rounded-lg bg-green-50 px-3 py-1.5 text-sm font-semibold text-green-700">
+                <span className="mb-1 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                   AI Fair Price ₹
                   {Number(product.aiFairPrice).toLocaleString("en-IN")}
                 </span>
               )}
             </div>
 
-            {/* Location */}
+            {/* LOCATION */}
 
-            <div className="mt-5 flex items-center gap-2 text-sm text-slate-500">
-              <MapPin size={17} className="text-blue-600" />
+            <div className="mt-5 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <MapPin size={17} className="text-blue-600 dark:text-blue-400" />
 
               {product.location || "Campus Pickup"}
             </div>
 
-            {/* Description */}
+            {/* DESCRIPTION */}
 
             <div className="mt-8">
-              <h2 className="text-lg font-bold text-slate-950">Description</h2>
+              <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+                Description
+              </h2>
 
-              <p className="mt-3 leading-7 text-slate-600">
+              <p className="mt-3 leading-7 text-slate-600 dark:text-slate-300">
                 {product.description}
               </p>
             </div>
 
-            {/* Availability */}
+            {/* AVAILABILITY */}
 
             <div className="mt-7 flex items-center gap-2">
               {product.isAvailable ?
                 <>
-                  <CheckCircle2 size={18} className="text-green-600" />
+                  <CheckCircle2
+                    size={18}
+                    className="text-emerald-600 dark:text-emerald-400"
+                  />
 
-                  <span className="text-sm font-semibold text-green-700">
-                    Available for {product.listingType.toLowerCase()}
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                    Available for {product.listingType?.toLowerCase()}
                   </span>
                 </>
               : <>
                   <XCircle size={18} className="text-red-500" />
 
-                  <span className="text-sm font-semibold text-red-600">
+                  <span className="text-sm font-semibold text-red-600 dark:text-red-400">
                     Currently unavailable
                   </span>
                 </>
               }
             </div>
 
-            {/* Actions */}
+            {/* =================================================
+                RENTAL
+            ================================================== */}
+
+            {isRental && product.isAvailable && (
+              <div className="mt-7 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+                <div className="flex items-center gap-2">
+                  <CalendarDays
+                    size={19}
+                    className="text-indigo-600 dark:text-indigo-400"
+                  />
+
+                  <h2 className="font-bold text-slate-950 dark:text-white">
+                    Rent this product
+                  </h2>
+                </div>
+
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Select your rental period and send a request to the seller.
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {/* START */}
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold text-slate-600 dark:text-slate-300">
+                      Start Date
+                    </label>
+
+                    <input
+                      type="date"
+                      value={rentalStartDate}
+                      onChange={(event) => {
+                        setRentalStartDate(event.target.value);
+
+                        setRentalAvailability(null);
+
+                        setRentalError("");
+                      }}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  {/* END */}
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold text-slate-600 dark:text-slate-300">
+                      End Date
+                    </label>
+
+                    <input
+                      type="date"
+                      value={rentalEndDate}
+                      onChange={(event) => {
+                        setRentalEndDate(event.target.value);
+
+                        setRentalAvailability(null);
+
+                        setRentalError("");
+                      }}
+                      min={
+                        rentalStartDate ||
+                        new Date().toISOString().split("T")[0]
+                      }
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* AVAILABILITY */}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={checkRentalAvailability}
+                    disabled={availabilityLoading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/30 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+                  >
+                    {availabilityLoading ?
+                      <>
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                        Checking...
+                      </>
+                    : "Check Availability"}
+                  </button>
+
+                  {rentalAvailability === true && (
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <CheckCircle2 size={14} />
+                      Available
+                    </span>
+                  )}
+
+                  {rentalAvailability === false && (
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700 dark:bg-red-500/10 dark:text-red-300">
+                      <XCircle size={14} />
+                      Not Available
+                    </span>
+                  )}
+                </div>
+
+                {/* MESSAGE */}
+
+                <div className="mt-4">
+                  <label className="mb-2 block text-xs font-bold text-slate-600 dark:text-slate-300">
+                    Message to Seller
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    maxLength={500}
+                    value={rentalMessage}
+                    onChange={(event) => setRentalMessage(event.target.value)}
+                    placeholder="Tell the seller anything important about your rental..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                  />
+                </div>
+
+                {/* SUMMARY */}
+
+                {rentalDays > 0 && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-900">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Rental Days
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">
+                        {rentalDays}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-900">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Rental Amount
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">
+                        ₹{rentalAmount.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3 dark:bg-slate-900">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Total
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">
+                        ₹{rentalTotal.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ERROR */}
+
+                {rentalError && (
+                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+                    {rentalError}
+                  </div>
+                )}
+
+                {/* SUCCESS */}
+
+                {rentalSuccess && (
+                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <CheckCircle2 size={17} />
+
+                    {rentalSuccess}
+                  </div>
+                )}
+
+                {/* RENT */}
+
+                <button
+                  type="button"
+                  onClick={handleRentNow}
+                  disabled={rentalLoading}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {rentalLoading ?
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Sending Request...
+                    </>
+                  : <>
+                      <CalendarDays size={18} />
+                      Rent Now
+                    </>
+                  }
+                </button>
+              </div>
+            )}
+
+            {/* =================================================
+                ACTIONS
+            ================================================== */}
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {/* Add Cart */}
-
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!product.isAvailable}
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                <ShoppingCart size={19} />
-                Add to Cart
-              </button>
-
-              {/* Chat */}
+              {!isRental && (
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!product.isAvailable}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+                >
+                  <ShoppingCart size={19} />
+                  Add to Cart
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={handleChatWithSeller}
                 disabled={!product.isAvailable}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-400 ${
+                  isRental ? "sm:col-span-2" : ""
+                }`}
               >
                 <MessageCircle size={19} />
                 Chat with Seller
               </button>
-
-              {/* Exchange */}
 
               {product.listingType === "Exchange" && (
                 <button
                   type="button"
                   onClick={openExchangeModal}
                   disabled={!product.isAvailable}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 sm:col-span-2"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 sm:col-span-2"
                 >
                   <ArrowRightLeft size={19} />
                   Make Exchange Offer
@@ -606,50 +1072,60 @@ function ProductDetails() {
               )}
             </div>
 
-            {/* Message */}
+            {/* COMMON MESSAGE */}
 
             {cartMessage && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                 <CheckCircle2 size={17} />
 
                 {cartMessage}
               </div>
             )}
 
-            {/* Seller */}
+            {/* =================================================
+                SELLER
+            ================================================== */}
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-lg font-bold text-blue-600">
-                    {sellerInitial}
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-blue-50 text-lg font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                    {product.seller?.profileImage ?
+                      <img
+                        src={product.seller.profileImage}
+                        alt={sellerName}
+                        className="h-full w-full object-cover"
+                      />
+                    : sellerInitial}
                   </div>
 
                   <div>
-                    <p className="font-bold text-slate-900">{sellerName}</p>
+                    <p className="font-bold text-slate-900 dark:text-white">
+                      {sellerName}
+                    </p>
 
-                    <p className="mt-0.5 text-sm text-slate-500">
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                       Student Seller
                     </p>
                   </div>
                 </div>
 
                 {product.seller?.isVerified && (
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                     <ShieldCheck size={18} />
                     Verified
                   </div>
                 )}
               </div>
 
-              <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
+              <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                   <User size={16} />
 
                   {product.seller?.studentId || "Student ID available"}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                   <MapPin size={16} />
 
                   {product.seller?.college || product.college || "Campus"}
@@ -659,52 +1135,71 @@ function ProductDetails() {
           </div>
         </div>
 
-        {/* AI Insight */}
+        {/* =================================================
+            AI INSIGHT
+        ================================================== */}
 
-        <section className="mt-12 rounded-3xl border border-blue-100 bg-blue-50 p-6 md:p-8">
+        <section className="mt-12 rounded-3xl border border-blue-100 bg-blue-50 p-6 dark:border-blue-500/20 dark:bg-blue-500/10 md:p-8">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <div className="flex items-center gap-2 text-blue-700">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
                 <Sparkles size={20} />
 
                 <span className="font-bold">AI Product Insight</span>
               </div>
 
-              <h2 className="mt-3 text-xl font-bold text-slate-950">
+              <h2 className="mt-3 text-xl font-bold text-slate-950 dark:text-white">
                 Smart analysis for your purchase
               </h2>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                 CampusMart AI will analyze product condition, pricing, seller
                 history and marketplace trends to help students make safer
                 buying decisions.
               </p>
             </div>
 
-            <div className="shrink-0 rounded-2xl bg-white p-5 shadow-sm">
+            <div className="shrink-0 rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-900">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 AI Match
               </p>
 
-              <p className="mt-1 text-3xl font-bold text-blue-600">94%</p>
+              <p className="mt-1 text-3xl font-bold text-blue-600 dark:text-blue-400">
+                94%
+              </p>
 
-              <p className="text-xs text-slate-500">Strong recommendation</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Strong recommendation
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Safety */}
+        {/* =================================================
+            REVIEWS & RATINGS
+        ================================================== */}
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
+        <ProductReviews productId={product._id} />
+
+        {/* =================================================
+            SAFETY
+        ================================================== */}
+
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 md:p-8">
           <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50">
-              <ShieldCheck size={22} className="text-green-600" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+              <ShieldCheck
+                size={22}
+                className="text-emerald-600 dark:text-emerald-400"
+              />
             </div>
 
             <div>
-              <h2 className="font-bold text-slate-950">Campus Safety</h2>
+              <h2 className="font-bold text-slate-950 dark:text-white">
+                Campus Safety
+              </h2>
 
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
                 Prefer campus pickup and verify the product before completing
                 the transaction. Avoid sharing sensitive account or payment
                 information with other users.
@@ -713,12 +1208,12 @@ function ProductDetails() {
           </div>
         </section>
 
-        {/* Continue Shopping */}
+        {/* CONTINUE SHOPPING */}
 
         <div className="mt-10 flex justify-center">
           <Link
             to="/marketplace"
-            className="flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-700"
+            className="flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
             Continue Shopping
             <ArrowRight size={17} />
@@ -726,56 +1221,57 @@ function ProductDetails() {
         </div>
       </main>
 
-      {/* ================================================================= */}
-      {/* EXCHANGE MODAL                                                    */}
-      {/* ================================================================= */}
+      {/* =====================================================
+          EXCHANGE MODAL
+      ===================================================== */}
 
       {showExchangeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-            {/* Modal Header */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            {/* MODAL HEADER */}
 
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                    <ArrowRightLeft size={20} className="text-blue-600" />
-                  </div>
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                  <ArrowRightLeft
+                    size={20}
+                    className="text-blue-600 dark:text-blue-400"
+                  />
+                </div>
 
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-950">
-                      Make Exchange Offer
-                    </h2>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+                    Make Exchange Offer
+                  </h2>
 
-                    <p className="text-sm text-slate-500">
-                      Offer one of your products
-                    </p>
-                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Offer one of your products
+                  </p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowExchangeModal(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
                 aria-label="Close exchange modal"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Modal Body */}
+            {/* MODAL BODY */}
 
             <div className="space-y-6 px-6 py-6">
-              {/* Target Product */}
+              {/* TARGET PRODUCT */}
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                   You want
                 </p>
 
                 <div className="mt-3 flex items-center gap-4">
-                  <div className="h-16 w-16 overflow-hidden rounded-xl bg-white">
+                  <div className="h-16 w-16 overflow-hidden rounded-xl bg-white dark:bg-slate-900">
                     <img
                       src={images[0]}
                       alt={product.title}
@@ -784,50 +1280,52 @@ function ProductDetails() {
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-slate-900">
+                    <h3 className="font-bold text-slate-900 dark:text-white">
                       {product.title}
                     </h3>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       ₹{Number(product.price || 0).toLocaleString("en-IN")}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Product Selection */}
+              {/* PRODUCT SELECT */}
 
               <div>
                 <label
                   htmlFor="exchange-product"
-                  className="block text-sm font-bold text-slate-900"
+                  className="block text-sm font-bold text-slate-900 dark:text-white"
                 >
                   Select your product
                 </label>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Choose a product from your listings that you want to offer in
-                  exchange.
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Choose one of your available products to offer.
                 </p>
 
                 {myProducts.length === 0 ?
-                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/10">
                     <div className="flex items-start gap-3">
-                      <Package size={20} className="mt-0.5 text-amber-600" />
+                      <Package
+                        size={20}
+                        className="mt-0.5 text-amber-600 dark:text-amber-400"
+                      />
 
                       <div>
-                        <p className="font-semibold text-amber-900">
+                        <p className="font-semibold text-amber-900 dark:text-amber-200">
                           No available products
                         </p>
 
-                        <p className="mt-1 text-sm leading-6 text-amber-700">
-                          You need to have at least one available product before
-                          sending an exchange offer.
+                        <p className="mt-1 text-sm leading-6 text-amber-700 dark:text-amber-300">
+                          Add at least one available product before sending an
+                          exchange offer.
                         </p>
 
                         <Link
                           to="/sell"
-                          className="mt-3 inline-flex text-sm font-bold text-amber-800 underline"
+                          className="mt-3 inline-flex text-sm font-bold text-amber-800 underline dark:text-amber-300"
                         >
                           List a product
                         </Link>
@@ -840,7 +1338,7 @@ function ProductDetails() {
                     onChange={(event) =>
                       setSelectedOfferProduct(event.target.value)
                     }
-                    className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-blue-500/10"
                   >
                     <option value="">Select a product</option>
 
@@ -854,12 +1352,12 @@ function ProductDetails() {
                 }
               </div>
 
-              {/* Message */}
+              {/* MESSAGE */}
 
               <div>
                 <label
                   htmlFor="exchange-message"
-                  className="block text-sm font-bold text-slate-900"
+                  className="block text-sm font-bold text-slate-900 dark:text-white"
                 >
                   Message
                 </label>
@@ -871,26 +1369,27 @@ function ProductDetails() {
                   rows={4}
                   maxLength={1000}
                   placeholder="Write a message for the seller..."
-                  className="mt-3 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="mt-3 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-blue-500/10"
                 />
 
                 <p className="mt-1 text-right text-xs text-slate-400">
-                  {exchangeMessage.length}/1000
+                  {exchangeMessage.length}
+                  /1000
                 </p>
               </div>
 
-              {/* Error */}
+              {/* ERROR */}
 
               {exchangeError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
                   {exchangeError}
                 </div>
               )}
 
-              {/* Success */}
+              {/* SUCCESS */}
 
               {exchangeSuccess && (
-                <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                   <CheckCircle2 size={17} />
 
                   {exchangeSuccess}
@@ -898,13 +1397,13 @@ function ProductDetails() {
               )}
             </div>
 
-            {/* Modal Footer */}
+            {/* MODAL FOOTER */}
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 dark:border-slate-800 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowExchangeModal(false)}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -913,7 +1412,7 @@ function ProductDetails() {
                 type="button"
                 onClick={handleSendExchangeOffer}
                 disabled={exchangeLoading || myProducts.length === 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
               >
                 {exchangeLoading ?
                   <>

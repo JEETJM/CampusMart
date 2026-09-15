@@ -2,12 +2,14 @@ const mongoose = require("mongoose");
 
 const exchangeOfferSchema = new mongoose.Schema(
   {
+    // Product owned by seller that buyer wants
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
       required: true,
     },
 
+    // Product originally offered by buyer
     offeredProduct: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
@@ -26,6 +28,7 @@ const exchangeOfferSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Original buyer message
     message: {
       type: String,
       trim: true,
@@ -33,10 +36,19 @@ const exchangeOfferSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Seller's counter product
     counterProduct: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
       default: null,
+    },
+
+    // Seller's counter message
+    counterMessage: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: "",
     },
 
     status: {
@@ -50,6 +62,21 @@ const exchangeOfferSchema = new mongoose.Schema(
         "Completed",
       ],
       default: "Pending",
+    },
+
+    counteredAt: {
+      type: Date,
+      default: null,
+    },
+
+    respondedAt: {
+      type: Date,
+      default: null,
+    },
+
+    completedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

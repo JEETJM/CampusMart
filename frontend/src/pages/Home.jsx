@@ -1,432 +1,383 @@
 import { Link } from "react-router-dom";
+import heroStudents from "../assets/campusmart-hero-students.png";
+
 import {
   ArrowRight,
-  BrainCircuit,
-  Camera,
-  CheckCircle2,
+  BookOpen,
+  Building2,
+  Check,
   ChevronRight,
   CircleDollarSign,
-  Handshake,
+  Grid2X2,
+  Headphones,
+  Heart,
   Laptop,
-  MessageCircle,
-  Package,
-  Search,
+  Leaf,
+  NotebookTabs,
   ShieldCheck,
   ShoppingBag,
+  Sofa,
   Sparkles,
-  Star,
   Store,
+  Shirt,
   Tag,
-  TrendingUp,
-  Truck,
   Users,
 } from "lucide-react";
 
-function Home() {
-  const categories = [
-    {
-      name: "Books",
-      icon: "📚",
-      count: "120+ items",
-    },
-    {
-      name: "Electronics",
-      icon: "💻",
-      count: "85+ items",
-    },
-    {
-      name: "Cycles",
-      icon: "🚲",
-      count: "42+ items",
-    },
-    {
-      name: "Furniture",
-      icon: "🪑",
-      count: "38+ items",
-    },
-    {
-      name: "Fashion",
-      icon: "👕",
-      count: "95+ items",
-    },
-    {
-      name: "Hostel Essentials",
-      icon: "🏠",
-      count: "70+ items",
-    },
-  ];
+const categories = [
+  {
+    name: "Books",
+    count: "120+ items",
+    icon: BookOpen,
+    tone: "blue",
+  },
+  {
+    name: "Electronics",
+    count: "85+ items",
+    icon: Laptop,
+    tone: "violet",
+  },
+  {
+    name: "Cycles",
+    count: "42+ items",
+    icon: Building2,
+    tone: "green",
+  },
+  {
+    name: "Furniture",
+    count: "38+ items",
+    icon: Sofa,
+    tone: "orange",
+  },
+  {
+    name: "Clothing",
+    count: "95+ items",
+    icon: Shirt,
+    tone: "pink",
+  },
+  {
+    name: "Accessories",
+    count: "65+ items",
+    icon: Headphones,
+    tone: "cyan",
+  },
+  {
+    name: "Sports",
+    count: "40+ items",
+    icon: CircleDollarSign,
+    tone: "yellow",
+  },
+  {
+    name: "Notes",
+    count: "70+ items",
+    icon: NotebookTabs,
+    tone: "indigo",
+  },
+  {
+    name: "Other",
+    count: "30+ items",
+    icon: Grid2X2,
+    tone: "slate",
+  },
+];
 
-  const aiFeatures = [
-    {
-      icon: Search,
-      title: "AI Smart Product Finder",
-      description:
-        "Describe what you need naturally and AI finds the most relevant products for you.",
-    },
-    {
-      icon: CircleDollarSign,
-      title: "AI Fair Price Predictor",
-      description:
-        "Get an estimated fair price based on condition, age, original price and demand.",
-    },
-    {
-      icon: Handshake,
-      title: "AI Exchange Matcher",
-      description:
-        "Find students whose products match what you want to exchange.",
-    },
-    {
-      icon: Camera,
-      title: "AI Visual Analysis",
-      description:
-        "AI analyzes product images and helps identify category and visible condition.",
-    },
-    {
-      icon: Sparkles,
-      title: "AI Seller Assistant",
-      description:
-        "Generate better titles, descriptions, tags and listing details automatically.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "AI Scam Detection",
-      description:
-        "Detect suspicious listings and unusual marketplace behavior for safer transactions.",
-    },
-  ];
+const features = [
+  {
+    icon: ShieldCheck,
+    title: "Safe & Secure",
+    description: "Verified students & secure transactions",
+  },
+  {
+    icon: Tag,
+    title: "Great Deals",
+    description: "Save money with campus prices",
+  },
+  {
+    icon: Users,
+    title: "Student Community",
+    description: "Buy and sell within your campus",
+  },
+  {
+    icon: Leaf,
+    title: "Sustainable Choice",
+    description: "Give useful products a second life",
+  },
+];
 
-  const products = [
-    {
-      title: "Engineering Mathematics Book",
-      category: "Books",
-      price: "₹350",
-      condition: "Like New",
-      seller: "Verified Student",
-      icon: "📘",
-    },
-    {
-      title: "Wireless Keyboard",
-      category: "Electronics",
-      price: "₹700",
-      condition: "Good",
-      seller: "Verified Student",
-      icon: "⌨️",
-    },
-    {
-      title: "Mountain Bicycle",
-      category: "Cycles",
-      price: "₹4,500",
-      condition: "Good",
-      seller: "Verified Student",
-      icon: "🚲",
-    },
-    {
-      title: "Study Table",
-      category: "Furniture",
-      price: "₹1,200",
-      condition: "Used",
-      seller: "Verified Student",
-      icon: "🪑",
-    },
-  ];
+const featuredProducts = [
+  {
+    title: "MacBook Air M1",
+    category: "Electronics",
+    price: "₹45,000",
+    condition: "Like New",
+    type: "For Sale",
+    image:
+      "https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    title: "Engineering Books",
+    category: "Books",
+    price: "₹2,000",
+    condition: "Good",
+    type: "For Sale",
+    image:
+      "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    title: "Mountain Cycle",
+    category: "Cycles",
+    price: "₹150 / day",
+    condition: "Good",
+    type: "For Rent",
+    image:
+      "https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&w=900&q=85",
+  },
+  {
+    title: "Smart Watch",
+    category: "Accessories",
+    price: "₹3,500",
+    condition: "Like New",
+    type: "For Sale",
+    image:
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=85",
+  },
+];
 
+const toneClasses = {
+  blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+  violet:
+    "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400",
+  green:
+    "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+  orange:
+    "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
+  pink: "bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-400",
+  cyan: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400",
+  yellow: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+  indigo:
+    "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
+  slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+};
+
+function StudentIllustration() {
   return (
-    <div className="bg-slate-50">
-      {/* HERO */}
-      <section className="relative overflow-hidden border-b border-slate-200 bg-white">
-        <div className="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-indigo-100 blur-3xl" />
+    <div className="relative overflow-hidden rounded-[2rem] border border-blue-100 bg-[#eaf5ff] dark:border-slate-800 dark:bg-slate-900">
+      <img
+        src={heroStudents}
+        alt="Campus students"
+        className="h-auto min-h-[430px] w-full object-contain object-center"
+      />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-24 lg:pt-24">
-          <div className="grid items-center gap-14 lg:grid-cols-2">
+      <div className="absolute left-5 top-5 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-xs font-bold text-blue-700 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 dark:text-blue-300">
+        Student-first marketplace
+      </div>
+    </div>
+  );
+}
+
+function Home() {
+  return (
+    <main className="overflow-hidden bg-[#f8fbff] text-slate-900 dark:bg-[#070d18] dark:text-slate-100">
+      {/* =========================================================
+          HERO
+      ========================================================== */}
+
+      <section className="relative border-b border-blue-100 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl dark:bg-blue-500/10" />
+
+        <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-sky-100/60 blur-3xl dark:bg-sky-500/10" />
+
+        <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-10 sm:px-6 lg:px-8 lg:pb-16 lg:pt-14">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14">
+            {/* LEFT */}
+
             <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                <Sparkles size={16} />
-                AI-Powered Student Marketplace
-              </div>
+              {/* BRAND */}
 
-              <h1 className="max-w-3xl text-5xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
-                Your Campus.
-                <br />
-                <span className="text-blue-600">Your Marketplace.</span>
-              </h1>
+              <div className="mb-7 inline-flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-blue-950/40">
+                  <ShoppingBag size={28} className="text-white" />
+                </div>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-                Buy, sell, exchange and rent products with verified students
-                from your campus community — powered by AI.
-              </p>
+                <div>
+                  <p className="text-[25px] font-extrabold tracking-tight text-slate-950 dark:text-white">
+                    Campus
+                    <span className="text-blue-600 dark:text-blue-400">
+                      Mart
+                    </span>
+                    <span className="ml-1.5 text-sm font-bold text-indigo-500 dark:text-indigo-400">
+                      AI
+                    </span>
+                  </p>
 
-              {/* AI SEARCH */}
-              <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/60">
-                <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4">
-                  <Sparkles className="shrink-0 text-blue-600" size={20} />
-
-                  <input
-                    type="text"
-                    placeholder="Try: I need a used laptop under ₹30,000..."
-                    className="min-w-0 flex-1 bg-transparent py-4 text-sm text-slate-700 outline-none"
-                  />
-
-                  <button className="hidden shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:block">
-                    Ask AI
-                  </button>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                    Campus Marketplace
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              {/* TITLE */}
+
+              <h1 className="max-w-2xl text-5xl font-black leading-[1.02] tracking-[-0.04em] text-slate-950 dark:text-white sm:text-6xl lg:text-[66px]">
+                Buy.
+                <span className="text-blue-600 dark:text-blue-400"> Sell.</span>
+                <br />
+                Exchange.
+                <span className="text-blue-600 dark:text-blue-400"> Rent.</span>
+              </h1>
+
+              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600 dark:text-slate-400">
+                Your trusted student marketplace to buy, sell, exchange and rent
+                useful products within your campus community.
+              </p>
+
+              {/* SEARCH */}
+
+              <div className="mt-8 max-w-2xl rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_15px_45px_rgba(37,99,235,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_15px_45px_rgba(0,0,0,0.35)]">
+                <form className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-slate-50 px-4 dark:bg-slate-800">
+                    <Sparkles
+                      size={20}
+                      className="shrink-0 text-blue-600 dark:text-blue-400"
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Search products, categories, or anything..."
+                      className="min-w-0 flex-1 bg-transparent py-4 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    />
+                  </div>
+
+                  <Link
+                    to="/marketplace"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:shadow-blue-950/30"
+                  >
+                    Search
+                    <ArrowRight size={17} />
+                  </Link>
+                </form>
+              </div>
+
+              {/* BENEFITS */}
+
+              <div className="mt-7 flex flex-wrap gap-x-7 gap-y-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                    <Check size={13} strokeWidth={3} className="text-white" />
+                  </span>
+                  Verified Students
+                </span>
+
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                    <Check size={13} strokeWidth={3} className="text-white" />
+                  </span>
+                  Campus Pickup
+                </span>
+
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                    <Check size={13} strokeWidth={3} className="text-white" />
+                  </span>
+                  AI Assisted
+                </span>
+              </div>
+
+              {/* CTA */}
+
+              <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   to="/marketplace"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-semibold text-white transition hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-blue-600 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-500 dark:hover:text-white"
                 >
                   Explore Marketplace
-                  <ArrowRight size={18} />
+                  <ArrowRight size={17} />
                 </Link>
 
                 <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-600"
+                  to="/sell"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-400"
                 >
                   Start Selling
                 </Link>
               </div>
-
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-500">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 size={17} className="text-green-600" />
-                  Verified Students
-                </span>
-
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 size={17} className="text-green-600" />
-                  Campus Pickup
-                </span>
-
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 size={17} className="text-green-600" />
-                  AI Assisted
-                </span>
-              </div>
             </div>
 
-            {/* HERO CARD */}
-            <div className="relative mx-auto w-full max-w-lg">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl shadow-blue-100">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">AI Marketplace</p>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Smart Recommendations
-                    </h2>
-                  </div>
+            {/* IMAGE */}
 
-                  <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                    <BrainCircuit size={24} />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-slate-200 p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 text-3xl">
-                        💻
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="truncate font-semibold text-slate-900">
-                            Student Laptop
-                          </h3>
-
-                          <span className="rounded-full bg-green-50 px-2 py-1 text-[10px] font-bold text-green-700">
-                            VERIFIED
-                          </span>
-                        </div>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          Excellent condition
-                        </p>
-
-                        <div className="mt-2 flex items-center gap-3">
-                          <span className="font-bold text-slate-900">
-                            ₹28,500
-                          </span>
-
-                          <span className="text-xs text-green-600">
-                            AI Fair Price
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <Sparkles
-                        className="mt-0.5 shrink-0 text-blue-600"
-                        size={19}
-                      />
-
-                      <div>
-                        <p className="text-sm font-semibold text-blue-900">
-                          AI Recommendation
-                        </p>
-
-                        <p className="mt-1 text-sm leading-6 text-blue-700">
-                          This product matches your budget and requirement with
-                          94% relevance.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-slate-50 p-3 text-center">
-                      <p className="text-lg font-bold text-slate-900">94%</p>
-                      <p className="text-[11px] text-slate-500">Match</p>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-3 text-center">
-                      <p className="text-lg font-bold text-slate-900">4.8</p>
-                      <p className="text-[11px] text-slate-500">Rating</p>
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-3 text-center">
-                      <p className="text-lg font-bold text-slate-900">AI</p>
-                      <p className="text-[11px] text-slate-500">Checked</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -bottom-5 -left-5 hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:block">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-green-50 p-2 text-green-600">
-                    <ShieldCheck size={20} />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-500">Marketplace</p>
-                    <p className="font-bold text-slate-900">Trusted & Safe</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <StudentIllustration />
           </div>
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-slate-200 sm:grid-cols-4">
-          <div className="px-4 py-7 text-center">
-            <p className="text-2xl font-bold text-slate-900">500+</p>
-            <p className="mt-1 text-sm text-slate-500">Products Listed</p>
-          </div>
+      {/* =========================================================
+          CATEGORY ROW
+      ========================================================== */}
 
-          <div className="px-4 py-7 text-center">
-            <p className="text-2xl font-bold text-slate-900">250+</p>
-            <p className="mt-1 text-sm text-slate-500">Students</p>
-          </div>
+      <section className="border-b border-blue-100 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
+            {categories.map((category) => {
+              const Icon = category.icon;
 
-          <div className="px-4 py-7 text-center">
-            <p className="text-2xl font-bold text-slate-900">50+</p>
-            <p className="mt-1 text-sm text-slate-500">Exchanges</p>
-          </div>
+              return (
+                <Link
+                  key={category.name}
+                  to={`/marketplace?category=${encodeURIComponent(category.name)}`}
+                  className="group rounded-2xl border border-slate-100 bg-white p-4 text-center transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:shadow-[0_15px_35px_rgba(0,0,0,0.3)]"
+                >
+                  <div
+                    className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl transition group-hover:scale-105 ${toneClasses[category.tone]}`}
+                  >
+                    <Icon size={22} />
+                  </div>
 
-          <div className="px-4 py-7 text-center">
-            <p className="text-2xl font-bold text-slate-900">4.8/5</p>
-            <p className="mt-1 text-sm text-slate-500">Average Rating</p>
-          </div>
-        </div>
-      </section>
+                  <h3 className="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">
+                    {category.name}
+                  </h3>
 
-      {/* CATEGORIES */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between gap-5">
-            <div>
-              <p className="font-semibold text-blue-600">EXPLORE</p>
-
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Popular Categories
-              </h2>
-
-              <p className="mt-3 text-slate-500">
-                Find what you need from your campus community.
-              </p>
-            </div>
-
-            <Link
-              to="/marketplace"
-              className="hidden items-center gap-1 text-sm font-semibold text-blue-600 sm:flex"
-            >
-              View all
-              <ChevronRight size={17} />
-            </Link>
-          </div>
-
-          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {categories.map((category) => (
-              <Link
-                to="/marketplace"
-                key={category.name}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-3xl transition group-hover:bg-blue-50">
-                  {category.icon}
-                </div>
-
-                <h3 className="mt-4 font-semibold text-slate-900">
-                  {category.name}
-                </h3>
-
-                <p className="mt-1 text-xs text-slate-500">{category.count}</p>
-              </Link>
-            ))}
+                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                    {category.count}
+                  </p>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* AI FEATURES */}
-      <section className="border-y border-slate-200 bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-              <BrainCircuit size={28} />
-            </div>
+      {/* =========================================================
+          FEATURES
+      ========================================================== */}
 
-            <p className="mt-5 font-semibold text-blue-600">SMARTER SHOPPING</p>
-
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              AI That Actually Helps
-            </h2>
-
-            <p className="mt-4 text-slate-500">
-              CampusMart AI is more than a marketplace. AI helps students
-              discover, price, sell, exchange and shop smarter.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {aiFeatures.map((feature) => {
+      <section className="bg-[#eef6ff] dark:bg-[#0b1424]">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="grid gap-2 rounded-2xl border border-blue-100 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, index) => {
               const Icon = feature.icon;
 
               return (
                 <div
                   key={feature.title}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-1 hover:border-blue-200 hover:bg-white hover:shadow-lg"
+                  className={`flex items-center gap-4 px-4 py-4 ${
+                    index !== 0 ?
+                      "border-t border-slate-100 sm:border-t-0 sm:border-l dark:border-slate-800"
+                    : ""
+                  }`}
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
                     <Icon size={21} />
                   </div>
 
-                  <h3 className="mt-5 font-bold text-slate-900">
-                    {feature.title}
-                  </h3>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {feature.title}
+                    </h3>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {feature.description}
-                  </p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {feature.description}
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -434,311 +385,156 @@ function Home() {
         </div>
       </section>
 
-      {/* PRODUCTS */}
-      <section className="py-20">
+      {/* =========================================================
+          FEATURED PRODUCTS
+      ========================================================== */}
+
+      <section className="bg-white py-16 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-5">
             <div>
-              <p className="font-semibold text-blue-600">MARKETPLACE</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
+                Featured Listings
+              </p>
 
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Featured Products
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                Top Picks for You
               </h2>
 
-              <p className="mt-3 text-slate-500">
-                Discover products listed by students.
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Handpicked products from your campus community.
               </p>
             </div>
 
             <Link
               to="/marketplace"
-              className="hidden items-center gap-1 text-sm font-semibold text-blue-600 sm:flex"
+              className="hidden items-center gap-1 text-sm font-bold text-blue-600 dark:text-blue-400 sm:flex"
             >
-              Browse marketplace
+              View All
               <ChevronRight size={17} />
             </Link>
           </div>
 
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => (
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredProducts.map((product) => (
               <Link
-                to="/marketplace"
                 key={product.title}
-                className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-1 hover:shadow-xl"
+                to="/marketplace"
+                className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/40"
               >
-                <div className="flex h-52 items-center justify-center bg-slate-100 text-7xl transition group-hover:bg-blue-50">
-                  {product.icon}
+                <div className="relative h-56 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  <img
+                    src={product.image}
+                    alt={product.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+
+                  <span className="absolute left-3 top-3 rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-bold text-white shadow-md">
+                    {product.type}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(event) => event.preventDefault()}
+                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 text-slate-600 shadow-md backdrop-blur transition hover:text-red-500 dark:bg-slate-900/90 dark:text-slate-300"
+                    aria-label={`Wishlist ${product.title}`}
+                  >
+                    <Heart size={17} />
+                  </button>
                 </div>
 
                 <div className="p-5">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium text-blue-600">
+                    <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                       {product.category}
-                    </span>
+                    </p>
 
-                    <span className="rounded-full bg-green-50 px-2 py-1 text-[10px] font-semibold text-green-700">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                       {product.condition}
                     </span>
                   </div>
 
-                  <h3 className="mt-3 line-clamp-2 font-semibold text-slate-900">
+                  <h3 className="mt-2 truncate text-base font-bold text-slate-900 dark:text-white">
                     {product.title}
                   </h3>
 
-                  <div className="mt-4 flex items-end justify-between">
-                    <div>
-                      <p className="text-xs text-slate-400">Price</p>
-                      <p className="text-xl font-bold text-slate-900">
-                        {product.price}
-                      </p>
-                    </div>
+                  <p className="mt-3 text-xl font-black text-blue-600 dark:text-blue-400">
+                    {product.price}
+                  </p>
 
-                    <div className="rounded-xl bg-slate-100 p-2 text-slate-600 transition group-hover:bg-blue-600 group-hover:text-white">
-                      <ArrowRight size={18} />
-                    </div>
-                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500">
+                      <ShieldCheck size={14} className="text-blue-500" />
+                      Verified Student
+                    </span>
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                    <ShieldCheck size={14} className="text-green-600" />
-                    {product.seller}
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition group-hover:bg-blue-600 group-hover:text-white dark:bg-slate-800 dark:text-slate-400">
+                      <ArrowRight size={15} />
+                    </span>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* HOW IT WORKS */}
-      <section className="border-y border-slate-200 bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="font-semibold text-blue-600">HOW IT WORKS</p>
-
-            <h2 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
-              Marketplace Made Simple
-            </h2>
-          </div>
-
-          <div className="mt-12 grid gap-8 md:grid-cols-4">
-            {[
-              {
-                number: "01",
-                icon: Users,
-                title: "Join Campus",
-                text: "Create your account and verify your student identity.",
-              },
-              {
-                number: "02",
-                icon: Search,
-                title: "Find or List",
-                text: "Search products or create your own listing.",
-              },
-              {
-                number: "03",
-                icon: MessageCircle,
-                title: "Connect",
-                text: "Chat with students and negotiate safely.",
-              },
-              {
-                number: "04",
-                icon: Package,
-                title: "Complete",
-                text: "Buy, sell, exchange or rent with campus pickup.",
-              },
-            ].map((step) => {
-              const Icon = step.icon;
-
-              return (
-                <div key={step.number} className="relative text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
-                    <Icon size={26} />
-                  </div>
-
-                  <span className="mt-5 block text-xs font-bold text-blue-600">
-                    STEP {step.number}
-                  </span>
-
-                  <h3 className="mt-2 font-bold text-slate-900">
-                    {step.title}
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {step.text}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* WHY CAMPUSMART */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <p className="font-semibold text-blue-600">WHY CAMPUSMART?</p>
-
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Built for Student Life
-              </h2>
-
-              <p className="mt-5 max-w-xl leading-7 text-slate-500">
-                CampusMart brings the convenience of e-commerce together with
-                the trust and convenience of your campus community.
-              </p>
-
-              <div className="mt-8 space-y-5">
-                {[
-                  {
-                    icon: ShieldCheck,
-                    title: "Verified Student Community",
-                    text: "Trade with students from your campus instead of unknown sellers.",
-                  },
-                  {
-                    icon: Truck,
-                    title: "Easy Campus Pickup",
-                    text: "Choose convenient pickup locations such as hostel, library or main gate.",
-                  },
-                  {
-                    icon: TrendingUp,
-                    title: "AI-Powered Decisions",
-                    text: "Get smarter recommendations, pricing insights and marketplace assistance.",
-                  },
-                  {
-                    icon: Store,
-                    title: "Buy, Sell, Exchange & Rent",
-                    text: "One platform for the complete student product lifecycle.",
-                  },
-                ].map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <div key={item.title} className="flex gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <Icon size={21} />
-                      </div>
-
-                      <div>
-                        <h3 className="font-semibold text-slate-900">
-                          {item.title}
-                        </h3>
-
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
-                          {item.text}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xl">
-              <div className="rounded-2xl bg-slate-950 p-7 text-white">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-blue-600 p-3">
-                    <BrainCircuit size={25} />
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-400">CampusMart AI</p>
-                    <h3 className="font-bold">Smart Marketplace</h3>
-                  </div>
-                </div>
-
-                <div className="mt-8 space-y-4">
-                  <div className="rounded-xl bg-white/10 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">
-                        Price confidence
-                      </span>
-
-                      <span className="font-bold text-green-400">92%</span>
-                    </div>
-
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full w-[92%] rounded-full bg-green-400" />
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl bg-white/10 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">
-                        Product match
-                      </span>
-
-                      <span className="font-bold text-blue-400">94%</span>
-                    </div>
-
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full w-[94%] rounded-full bg-blue-400" />
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl bg-white/10 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">
-                        Listing quality
-                      </span>
-
-                      <span className="font-bold text-purple-400">
-                        Excellent
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex gap-1">
-                      {[1, 2, 3, 4, 5].map((item) => (
-                        <Star
-                          key={item}
-                          size={18}
-                          className="fill-current text-yellow-400"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-blue-600 py-16">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white">
-            <ShoppingBag size={28} />
-          </div>
-
-          <h2 className="mt-6 text-3xl font-bold text-white sm:text-4xl">
-            Ready to make your campus marketplace smarter?
-          </h2>
-
-          <p className="mx-auto mt-4 max-w-2xl text-blue-100">
-            Join CampusMart and start buying, selling, exchanging and renting
-            with your student community.
-          </p>
-
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              to="/register"
-              className="rounded-xl bg-white px-6 py-3.5 font-semibold text-blue-600 transition hover:bg-blue-50"
-            >
-              Create Student Account
-            </Link>
-
+          <div className="mt-7 flex justify-center sm:hidden">
             <Link
               to="/marketplace"
-              className="rounded-xl border border-blue-400 px-6 py-3.5 font-semibold text-white transition hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white"
             >
-              Explore Marketplace
+              View All Products
+              <ArrowRight size={16} />
             </Link>
           </div>
         </div>
       </section>
+{/* =========================================================
+    AI CTA
+========================================================== */}
+
+<section className="border-y border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-16 dark:border-slate-800 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950/40">
+  <div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+    {/* ICON */}
+
+    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 dark:bg-blue-500 dark:shadow-blue-950/40">
+      <Sparkles size={27} />
     </div>
+
+    {/* TITLE */}
+
+    <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+      Smarter shopping for student life.
+    </h2>
+
+    {/* DESCRIPTION */}
+
+    <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400 sm:text-base">
+      CampusMart AI helps students discover better products, compare prices
+      and make smarter buying, selling, rental and exchange decisions.
+    </p>
+
+    {/* BUTTONS */}
+
+    <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+      <Link
+        to="/marketplace"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:bg-blue-500 dark:shadow-blue-950/40 dark:hover:bg-blue-400"
+      >
+        Explore Marketplace
+        <ArrowRight size={17} />
+      </Link>
+
+      <Link
+        to="/register"
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-400"
+      >
+        Join CampusMart
+        <Users size={17} />
+      </Link>
+    </div>
+  </div>
+</section>
+    </main>
   );
 }
 

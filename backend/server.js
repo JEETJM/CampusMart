@@ -14,7 +14,8 @@ const orderRoutes = require("./routes/orderRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const exchangeRoutes = require("./routes/exchangeRoutes");
-
+const rentalRoutes = require("./routes/rentalRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const app = express();
 
 // ==========================================
@@ -41,17 +42,11 @@ app.use(
         return callback(null, true);
       }
 
-      if (
-        allowedOrigins.includes(origin)
-      ) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(
-        new Error(
-          "Not allowed by CORS",
-        ),
-      );
+      return callback(new Error("Not allowed by CORS"));
     },
 
     credentials: true,
@@ -74,6 +69,10 @@ app.use(
     limit: "10mb",
   }),
 );
+app.use(
+  "/api/reviews",
+  reviewRoutes,
+);
 
 app.use(cookieParser());
 
@@ -84,11 +83,8 @@ app.use(cookieParser());
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message:
-      "CampusMart API is running",
-    environment:
-      process.env.NODE_ENV ||
-      "development",
+    message: "CampusMart API is running",
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
@@ -96,103 +92,61 @@ app.get("/", (req, res) => {
 // API ROUTES
 // ==========================================
 
-app.use(
-  "/api/auth",
-  authRoutes,
-);
+app.use("/api/auth", authRoutes);
 
-app.use(
-  "/api/products",
-  productRoutes,
-);
+app.use("/api/products", productRoutes);
 
-app.use(
-  "/api/upload",
-  uploadRoutes,
-);
+app.use("/api/upload", uploadRoutes);
 
-app.use(
-  "/api/cart",
-  cartRoutes,
-);
+app.use("/api/cart", cartRoutes);
 
-app.use(
-  "/api/orders",
-  orderRoutes,
-);
+app.use("/api/orders", orderRoutes);
 
-app.use(
-  "/api/wishlist",
-  wishlistRoutes,
-);
+app.use("/api/wishlist", wishlistRoutes);
 
-app.use(
-  "/api/chat",
-  chatRoutes,
-);
+app.use("/api/chat", chatRoutes);
 
-app.use(
-  "/api/exchange",
-  exchangeRoutes,
-);
+app.use("/api/exchange", exchangeRoutes);
+
+app.use("/api/rentals", rentalRoutes);
 
 // ==========================================
 // 404
 // ==========================================
 
-app.use(
-  (req, res) => {
-    res.status(404).json({
-      success: false,
-      message:
-        "API route not found.",
-    });
-  },
-);
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "API route not found.",
+  });
+});
 
 // ==========================================
 // ERROR HANDLER
 // ==========================================
 
-app.use(
-  (error, req, res, next) => {
-    console.error(
-      "Server Error:",
-      error,
-    );
+app.use((error, req, res, next) => {
+  console.error("Server Error:", error);
 
-    if (
-      error.message ===
-      "Not allowed by CORS"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "CORS request blocked.",
-      });
-    }
-
-    return res.status(500).json({
+  if (error.message === "Not allowed by CORS") {
+    return res.status(403).json({
       success: false,
-      message:
-        "Internal server error.",
+      message: "CORS request blocked.",
     });
-  },
-);
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error.",
+  });
+});
 
 // ==========================================
 // START SERVER
 // ==========================================
 
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log(
-      `CampusMart API running on port ${PORT}`,
-    );
-  },
-);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`CampusMart API running on port ${PORT}`);
+});

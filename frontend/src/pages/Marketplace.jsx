@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+
 import {
   Search,
   SlidersHorizontal,
@@ -12,10 +13,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
 } from "lucide-react";
 
 import api from "../services/api";
+
+// =====================================================
+// CONSTANTS
+// =====================================================
 
 const categories = [
   "All",
@@ -35,35 +39,87 @@ const conditions = ["All", "New", "Like New", "Good", "Fair"];
 const listingTypes = ["All", "Sell", "Rent", "Exchange"];
 
 const sortOptions = [
-  { value: "newest", label: "Newest First" },
-  { value: "oldest", label: "Oldest First" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
-  { value: "popular", label: "Most Popular" },
+  {
+    value: "newest",
+    label: "Newest First",
+  },
+  {
+    value: "oldest",
+    label: "Oldest First",
+  },
+  {
+    value: "price-low",
+    label: "Price: Low to High",
+  },
+  {
+    value: "price-high",
+    label: "Price: High to Low",
+  },
+  {
+    value: "popular",
+    label: "Most Popular",
+  },
 ];
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80";
 
+// =====================================================
+// COMPONENT
+// =====================================================
+
 function Marketplace() {
+  // ===================================================
+  // URL SEARCH PARAMS
+  // ===================================================
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ===================================================
+  // PRODUCT STATE
+  // ===================================================
+
   const [products, setProducts] = useState([]);
 
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [condition, setCondition] = useState("All");
-  const [listingType, setListingType] = useState("All");
+  // ===================================================
+  // FILTER STATE
+  // ===================================================
 
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
 
-  const [sort, setSort] = useState("newest");
+  const [category, setCategory] = useState(
+    searchParams.get("category") || "All",
+  );
+
+  const [condition, setCondition] = useState(
+    searchParams.get("condition") || "All",
+  );
+
+  const [listingType, setListingType] = useState(
+    searchParams.get("listingType") || "All",
+  );
+
+  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
+
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
+
+  const [sort, setSort] = useState(searchParams.get("sort") || "newest");
 
   const [showFilters, setShowFilters] = useState(false);
 
+  // ===================================================
+  // WISHLIST
+  // ===================================================
+
   const [wishlist, setWishlist] = useState([]);
+
+  // ===================================================
+  // PAGINATION
+  // ===================================================
 
   const [page, setPage] = useState(1);
 
@@ -76,9 +132,102 @@ function Marketplace() {
     hasPreviousPage: false,
   });
 
-  // ==============================
+  // ===================================================
+  // SYNC URL -> STATE
+  // ===================================================
+
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+
+    const urlCategory = searchParams.get("category") || "All";
+
+    const urlCondition = searchParams.get("condition") || "All";
+
+    const urlListingType = searchParams.get("listingType") || "All";
+
+    const urlMinPrice = searchParams.get("minPrice") || "";
+
+    const urlMaxPrice = searchParams.get("maxPrice") || "";
+
+    const urlSort = searchParams.get("sort") || "newest";
+
+    setSearch(urlSearch);
+
+    setCategory(categories.includes(urlCategory) ? urlCategory : "All");
+
+    setCondition(conditions.includes(urlCondition) ? urlCondition : "All");
+
+    setListingType(
+      listingTypes.includes(urlListingType) ? urlListingType : "All",
+    );
+
+    setMinPrice(urlMinPrice);
+    setMaxPrice(urlMaxPrice);
+    setSort(urlSort);
+
+    setPage(1);
+  }, [searchParams]);
+
+  // ===================================================
+  // UPDATE URL WHEN FILTERS CHANGE
+  // ===================================================
+
+  useEffect(() => {
+    const nextParams = {};
+
+    if (search.trim()) {
+      nextParams.search = search.trim();
+    }
+
+    if (category !== "All") {
+      nextParams.category = category;
+    }
+
+    if (condition !== "All") {
+      nextParams.condition = condition;
+    }
+
+    if (listingType !== "All") {
+      nextParams.listingType = listingType;
+    }
+
+    if (minPrice !== "") {
+      nextParams.minPrice = minPrice;
+    }
+
+    if (maxPrice !== "") {
+      nextParams.maxPrice = maxPrice;
+    }
+
+    if (sort !== "newest") {
+      nextParams.sort = sort;
+    }
+
+    const currentQuery = searchParams.toString();
+
+    const nextQuery = new URLSearchParams(nextParams).toString();
+
+    if (currentQuery !== nextQuery) {
+      setSearchParams(nextParams, {
+        replace: true,
+      });
+    }
+  }, [
+    search,
+    category,
+    condition,
+    listingType,
+    minPrice,
+    maxPrice,
+    sort,
+    searchParams,
+    setSearchParams,
+  ]);
+
+  // ===================================================
   // FETCH PRODUCTS
-  // ==============================
+  // ===================================================
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -119,10 +268,10 @@ function Marketplace() {
           params,
         });
 
-        setProducts(response.data.products || []);
+        setProducts(response.data?.products || []);
 
         setPagination(
-          response.data.pagination || {
+          response.data?.pagination || {
             totalProducts: 0,
             totalPages: 0,
             currentPage: 1,
@@ -155,16 +304,10 @@ function Marketplace() {
     sort,
   ]);
 
-  // ==============================
-  // RESET PAGE WHEN FILTER CHANGES
-  // ==============================
-  useEffect(() => {
-    setPage(1);
-  }, [search, category, condition, listingType, minPrice, maxPrice, sort]);
-
-  // ==============================
+  // ===================================================
   // WISHLIST
-  // ==============================
+  // ===================================================
+
   const toggleWishlist = (productId) => {
     setWishlist((previous) =>
       previous.includes(productId) ?
@@ -173,9 +316,10 @@ function Marketplace() {
     );
   };
 
-  // ==============================
+  // ===================================================
   // CLEAR FILTERS
-  // ==============================
+  // ===================================================
+
   const clearFilters = () => {
     setSearch("");
     setCategory("All");
@@ -187,6 +331,10 @@ function Marketplace() {
     setPage(1);
   };
 
+  // ===================================================
+  // ACTIVE FILTER CHECK
+  // ===================================================
+
   const hasActiveFilters =
     search.trim() ||
     category !== "All" ||
@@ -196,17 +344,21 @@ function Marketplace() {
     maxPrice !== "" ||
     sort !== "newest";
 
-  // ==============================
+  // ===================================================
   // PAGINATION NUMBERS
-  // ==============================
+  // ===================================================
+
   const getPageNumbers = () => {
     const totalPages = pagination.totalPages;
 
-    if (!totalPages) return [];
+    if (!totalPages) {
+      return [];
+    }
 
     const pages = [];
 
     const start = Math.max(1, page - 2);
+
     const end = Math.min(totalPages, page + 2);
 
     for (let i = start; i <= end; i++) {
@@ -216,11 +368,16 @@ function Marketplace() {
     return pages;
   };
 
+  // ===================================================
+  // RENDER
+  // ===================================================
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ==============================
+      {/* =================================================
           HERO
-      ============================== */}
+      ================================================= */}
+
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
           <div className="max-w-3xl">
@@ -240,23 +397,22 @@ function Marketplace() {
             </p>
           </div>
 
-          {/* ==============================
-              SEARCH
-          ============================== */}
+          {/* SEARCH */}
+
           <div className="mt-8 flex max-w-5xl items-center rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
             <Search size={21} className="ml-3 shrink-0 text-slate-400" />
 
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search books, electronics, cycles..."
               className="w-full bg-transparent px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
 
             <button
               type="button"
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => setShowFilters((previous) => !previous)}
               className="flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
             >
               <SlidersHorizontal size={18} />
@@ -264,13 +420,38 @@ function Marketplace() {
             </button>
           </div>
 
-          {/* ==============================
+          {/* =================================================
+              ACTIVE CATEGORY
+          ================================================= */}
+
+          {category !== "All" && (
+            <div className="mt-4 flex items-center gap-2">
+              <span className="text-sm text-slate-500">Showing:</span>
+
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
+                {category}
+
+                <button
+                  type="button"
+                  onClick={() => setCategory("All")}
+                  className="rounded-full hover:bg-blue-100"
+                  aria-label="Remove category filter"
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            </div>
+          )}
+
+          {/* =================================================
               FILTER PANEL
-          ============================== */}
+          ================================================= */}
+
           {showFilters && (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {/* CATEGORY */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Category
@@ -279,7 +460,7 @@ function Marketplace() {
                   <div className="relative">
                     <select
                       value={category}
-                      onChange={(e) => setCategory(e.target.value)}
+                      onChange={(event) => setCategory(event.target.value)}
                       className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
                     >
                       {categories.map((item) => (
@@ -297,6 +478,7 @@ function Marketplace() {
                 </div>
 
                 {/* CONDITION */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Condition
@@ -305,7 +487,7 @@ function Marketplace() {
                   <div className="relative">
                     <select
                       value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
+                      onChange={(event) => setCondition(event.target.value)}
                       className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
                     >
                       {conditions.map((item) => (
@@ -323,6 +505,7 @@ function Marketplace() {
                 </div>
 
                 {/* LISTING TYPE */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Listing Type
@@ -331,7 +514,7 @@ function Marketplace() {
                   <div className="relative">
                     <select
                       value={listingType}
-                      onChange={(e) => setListingType(e.target.value)}
+                      onChange={(event) => setListingType(event.target.value)}
                       className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
                     >
                       {listingTypes.map((item) => (
@@ -349,6 +532,7 @@ function Marketplace() {
                 </div>
 
                 {/* MIN PRICE */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Minimum Price
@@ -358,13 +542,14 @@ function Marketplace() {
                     type="number"
                     min="0"
                     value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
+                    onChange={(event) => setMinPrice(event.target.value)}
                     placeholder="₹ Minimum"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500"
                   />
                 </div>
 
                 {/* MAX PRICE */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Maximum Price
@@ -374,13 +559,14 @@ function Marketplace() {
                     type="number"
                     min="0"
                     value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
+                    onChange={(event) => setMaxPrice(event.target.value)}
                     placeholder="₹ Maximum"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500"
                   />
                 </div>
 
                 {/* SORT */}
+
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Sort By
@@ -389,7 +575,7 @@ function Marketplace() {
                   <div className="relative">
                     <select
                       value={sort}
-                      onChange={(e) => setSort(e.target.value)}
+                      onChange={(event) => setSort(event.target.value)}
                       className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
                     >
                       {sortOptions.map((item) => (
@@ -422,10 +608,13 @@ function Marketplace() {
         </div>
       </section>
 
-      {/* ==============================
-          MARKETPLACE
-      ============================== */}
+      {/* =================================================
+          MAIN
+      ================================================= */}
+
       <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+        {/* HEADER */}
+
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-2xl font-bold text-slate-950">Marketplace</h2>
@@ -452,9 +641,8 @@ function Marketplace() {
           )}
         </div>
 
-        {/* ==============================
-            ERROR
-        ============================== */}
+        {/* ERROR */}
+
         {error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
             <p className="font-semibold">Unable to load marketplace</p>
@@ -471,9 +659,8 @@ function Marketplace() {
           </div>
         )}
 
-        {/* ==============================
-            LOADING
-        ============================== */}
+        {/* LOADING */}
+
         {loading && !error && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
@@ -497,9 +684,8 @@ function Marketplace() {
           </div>
         )}
 
-        {/* ==============================
-            PRODUCTS
-        ============================== */}
+        {/* PRODUCTS */}
+
         {!loading && !error && products.length > 0 && (
           <>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -514,22 +700,25 @@ function Marketplace() {
                     className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
                   >
                     {/* IMAGE */}
+
                     <div className="relative h-56 overflow-hidden bg-slate-100">
                       <img
                         src={image}
                         alt={product.title}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.src = fallbackImage;
+                        onError={(event) => {
+                          event.currentTarget.src = fallbackImage;
                         }}
                       />
 
                       {/* LISTING TYPE */}
+
                       <div className="absolute left-3 top-3 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
                         {product.listingType}
                       </div>
 
                       {/* WISHLIST */}
+
                       <button
                         type="button"
                         onClick={() => toggleWishlist(product._id)}
@@ -548,6 +737,7 @@ function Marketplace() {
                     </div>
 
                     {/* CONTENT */}
+
                     <div className="p-5">
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
@@ -570,12 +760,24 @@ function Marketplace() {
                       </p>
 
                       {/* PRICE */}
+
                       <div className="mt-4 flex items-end justify-between">
                         <div>
                           <p className="text-2xl font-bold text-slate-950">
                             ₹
                             {Number(product.price || 0).toLocaleString("en-IN")}
                           </p>
+
+                          {product.listingType === "Rent" &&
+                            product.rentalPricePerDay > 0 && (
+                              <p className="mt-1 text-xs font-semibold text-blue-600">
+                                ₹
+                                {Number(
+                                  product.rentalPricePerDay,
+                                ).toLocaleString("en-IN")}
+                                /day
+                              </p>
+                            )}
 
                           {product.aiFairPrice && (
                             <p className="mt-1 text-xs font-medium text-green-600">
@@ -597,6 +799,7 @@ function Marketplace() {
                       </div>
 
                       {/* SELLER */}
+
                       <div className="mt-5 border-t border-slate-100 pt-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
@@ -637,9 +840,10 @@ function Marketplace() {
               })}
             </div>
 
-            {/* ==============================
+            {/* =================================================
                   PAGINATION
-              ============================== */}
+              ================================================= */}
+
             {pagination.totalPages > 1 && (
               <div className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-slate-200 pt-7 sm:flex-row">
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -656,6 +860,7 @@ function Marketplace() {
 
                 <div className="flex items-center gap-2">
                   {/* PREVIOUS */}
+
                   <button
                     type="button"
                     disabled={!pagination.hasPreviousPage}
@@ -670,6 +875,7 @@ function Marketplace() {
                   </button>
 
                   {/* PAGE NUMBERS */}
+
                   <div className="flex items-center gap-1">
                     {getPageNumbers().map((pageNumber) => (
                       <button
@@ -688,6 +894,7 @@ function Marketplace() {
                   </div>
 
                   {/* NEXT */}
+
                   <button
                     type="button"
                     disabled={!pagination.hasNextPage}
@@ -708,9 +915,10 @@ function Marketplace() {
           </>
         )}
 
-        {/* ==============================
+        {/* =================================================
             EMPTY
-        ============================== */}
+        ================================================= */}
+
         {!loading && !error && products.length === 0 && (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">

@@ -6,23 +6,70 @@ const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const cloudinary = require("../config/cloudinary");
 
-// ===============================
+// ============================================================
 // JWT HELPER
-// ===============================
+// ============================================================
+
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 };
 
-// ===============================
+// ============================================================
+// LOCATION HELPER
+// ============================================================
+
+const parseLocationCoordinates = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+
+    if (parsed && parsed.lat !== undefined && parsed.lng !== undefined) {
+      const lat = Number(parsed.lat);
+      const lng = Number(parsed.lng);
+
+      if (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180
+      ) {
+        return {
+          lat,
+          lng,
+        };
+      }
+    }
+  } catch (error) {
+    console.warn("Location Coordinates Parse Error:", error.message);
+  }
+
+  return null;
+};
+
+// ============================================================
 // REGISTER
-// ===============================
+// ============================================================
+
 const registerUser = async (req, res) => {
   try {
-    const { name, email, studentId, password, college, location } =
-      req.body || {};
+    const {
+      name,
+      email,
+      studentId,
+      password,
+      college,
+      location,
+      locationCoordinates,
+    } = req.body || {};
 
+    // Required fields
     if (!name || !email || !studentId || !password) {
       return res.status(400).json({
         success: false,
@@ -30,6 +77,7 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // Password validation
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -37,11 +85,19 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const cleanName = name.trim();
+    // Clean values
+    const cleanName = String(name).trim();
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
-    const normalizedStudentId = studentId.trim();
+    const normalizedStudentId = String(studentId).trim();
+
+    const cleanCollege =
+      college !== undefined ?
+        String(college).trim()
+      : "Narula Institute of Technology";
+
+    const cleanLocation = location !== undefined ? String(location).trim() : "";
 
     if (cleanName.length < 2) {
       return res.status(400).json({
@@ -50,7 +106,17 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Check existing email
+    // ========================================================
+    // PARSE LOCATION COORDINATES
+    // ========================================================
+
+    const parsedLocationCoordinates =
+      parseLocationCoordinates(locationCoordinates);
+
+    // ========================================================
+    // CHECK EMAIL
+    // ========================================================
+
     const existingEmail = await User.findOne({
       email: normalizedEmail,
     });
@@ -62,7 +128,10 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Check existing student ID
+    // ========================================================
+    // CHECK STUDENT ID
+    // ========================================================
+
     const existingStudentId = await User.findOne({
       studentId: normalizedStudentId,
     });
@@ -74,27 +143,47 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Hash password
+    // ========================================================
+    // HASH PASSWORD
+    // ========================================================
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // ========================================================
+    // CREATE USER
+    // ========================================================
+
     const user = await User.create({
       name: cleanName,
       email: normalizedEmail,
       studentId: normalizedStudentId,
       password: hashedPassword,
-      college: college?.trim() || "Narula Institute of Technology",
-      location: location?.trim() || "",
+
+      college: cleanCollege || "Narula Institute of Technology",
+
+      location: cleanLocation,
+
+      locationCoordinates: parsedLocationCoordinates,
+
       profileImage: "",
     });
 
-    // Generate JWT
+    // ========================================================
+    // JWT
+    // ========================================================
+
     const token = generateToken(user._id);
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return res.status(201).json({
       success: true,
       message: "Registration successful.",
+
       token,
+
       user: {
         id: user._id,
         name: user.name,
@@ -102,9 +191,14 @@ const registerUser = async (req, res) => {
         studentId: user.studentId,
         college: user.college,
         location: user.location || "",
+
+        locationCoordinates: user.locationCoordinates || null,
+
         profileImage: user.profileImage || "",
+
         role: user.role,
         isVerified: user.isVerified,
+
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -119,9 +213,10 @@ const registerUser = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // LOGIN
-// ===============================
+// ============================================================
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -133,7 +228,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
     // Find user
     const user = await User.findOne({
@@ -163,7 +258,9 @@ const loginUser = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful.",
+
       token,
+
       user: {
         id: user._id,
         name: user.name,
@@ -171,9 +268,14 @@ const loginUser = async (req, res) => {
         studentId: user.studentId,
         college: user.college,
         location: user.location || "",
+
+        locationCoordinates: user.locationCoordinates || null,
+
         profileImage: user.profileImage || "",
+
         role: user.role,
         isVerified: user.isVerified,
+
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -188,9 +290,10 @@ const loginUser = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // GET CURRENT USER
-// ===============================
+// ============================================================
+
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
@@ -216,9 +319,10 @@ const getMe = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // FORGOT PASSWORD
-// ===============================
+// ============================================================
+
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body || {};
@@ -230,7 +334,7 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
     const user = await User.findOne({
       email: normalizedEmail,
@@ -244,15 +348,14 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate 6 digit OTP
+    // Generate OTP
     const otp = crypto.randomInt(100000, 1000000).toString();
 
-    // Hash OTP before saving
+    // Hash OTP
     const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
 
     user.resetPasswordToken = hashedOTP;
 
-    // OTP valid for 10 minutes
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
@@ -262,111 +365,135 @@ const forgotPassword = async (req, res) => {
       <html>
       <head>
         <meta charset="UTF-8">
+
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1.0"
         >
+
         <title>CampusMart Password Reset</title>
       </head>
 
-      <body style="
-        margin:0;
-        padding:0;
-        background:#f8fafc;
-        font-family:Arial,Helvetica,sans-serif;
-      ">
+      <body
+        style="
+          margin:0;
+          padding:0;
+          background:#f8fafc;
+          font-family:Arial,Helvetica,sans-serif;
+        "
+      >
 
-        <div style="
-          max-width:600px;
-          margin:40px auto;
-          background:#ffffff;
-          border:1px solid #e2e8f0;
-          border-radius:16px;
-          padding:32px;
-        ">
+        <div
+          style="
+            max-width:600px;
+            margin:40px auto;
+            background:#ffffff;
+            border:1px solid #e2e8f0;
+            border-radius:16px;
+            padding:32px;
+          "
+        >
 
-          <h2 style="
-            margin:0;
-            color:#0f172a;
-          ">
+          <h2
+            style="
+              margin:0;
+              color:#0f172a;
+            "
+          >
             CampusMart
           </h2>
 
-          <p style="
-            color:#475569;
-            line-height:1.6;
-          ">
+          <p
+            style="
+              color:#475569;
+              line-height:1.6;
+            "
+          >
             We received a request to reset your
             CampusMart account password.
           </p>
 
-          <div style="
-            margin:28px 0;
-            padding:25px;
-            text-align:center;
-            background:#eff6ff;
-            border-radius:12px;
-          ">
+          <div
+            style="
+              margin:28px 0;
+              padding:25px;
+              text-align:center;
+              background:#eff6ff;
+              border-radius:12px;
+            "
+          >
 
-            <p style="
-              margin:0 0 10px;
-              color:#64748b;
-              font-size:14px;
-            ">
+            <p
+              style="
+                margin:0 0 10px;
+                color:#64748b;
+                font-size:14px;
+              "
+            >
               Your verification code
             </p>
 
-            <div style="
-              font-size:34px;
-              font-weight:bold;
-              letter-spacing:8px;
-              color:#2563eb;
-            ">
+            <div
+              style="
+                font-size:34px;
+                font-weight:bold;
+                letter-spacing:8px;
+                color:#2563eb;
+              "
+            >
               ${otp}
             </div>
-
           </div>
 
-          <p style="
-            color:#475569;
-            line-height:1.6;
-          ">
+          <p
+            style="
+              color:#475569;
+              line-height:1.6;
+            "
+          >
             This OTP is valid for
             <strong>10 minutes</strong>.
           </p>
 
-          <p style="
-            color:#64748b;
-            font-size:13px;
-            line-height:1.6;
-          ">
+          <p
+            style="
+              color:#64748b;
+              font-size:13px;
+              line-height:1.6;
+            "
+          >
             If you did not request a password reset,
             you can safely ignore this email.
           </p>
 
-          <hr style="
-            border:none;
-            border-top:1px solid #e2e8f0;
-            margin:28px 0;
-          ">
+          <hr
+            style="
+              border:none;
+              border-top:1px solid #e2e8f0;
+              margin:28px 0;
+            "
+          >
 
-          <p style="
-            margin:0;
-            color:#94a3b8;
-            font-size:12px;
-          ">
+          <p
+            style="
+              margin:0;
+              color:#94a3b8;
+              font-size:12px;
+            "
+          >
             CampusMart Student Marketplace
           </p>
 
         </div>
-
       </body>
       </html>
     `;
 
     await sendEmail({
       to: normalizedEmail,
+
       subject: "CampusMart Password Reset OTP",
+
       html: emailHTML,
     });
 
@@ -384,9 +511,10 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // VERIFY OTP
-// ===============================
+// ============================================================
+
 const verifyResetOTP = async (req, res) => {
   try {
     const { email, otp } = req.body || {};
@@ -405,13 +533,15 @@ const verifyResetOTP = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
     const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
 
     const user = await User.findOne({
       email: normalizedEmail,
+
       resetPasswordToken: hashedOTP,
+
       resetPasswordExpire: {
         $gt: new Date(),
       },
@@ -438,9 +568,10 @@ const verifyResetOTP = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // RESET PASSWORD
-// ===============================
+// ============================================================
+
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body || {};
@@ -466,13 +597,15 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
     const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
 
     const user = await User.findOne({
       email: normalizedEmail,
+
       resetPasswordToken: hashedOTP,
+
       resetPasswordExpire: {
         $gt: new Date(),
       },
@@ -507,14 +640,16 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // UPDATE PROFILE
-// ===============================
+// ============================================================
+
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const { name, studentId, college, location } = req.body || {};
+    const { name, studentId, college, location, locationCoordinates } =
+      req.body || {};
 
     const user = await User.findById(userId);
 
@@ -525,9 +660,9 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    // -------------------------------
+    // ========================================================
     // NAME
-    // -------------------------------
+    // ========================================================
 
     if (name !== undefined) {
       const cleanName = String(name).trim();
@@ -542,15 +677,16 @@ const updateProfile = async (req, res) => {
       user.name = cleanName;
     }
 
-    // -------------------------------
+    // ========================================================
     // STUDENT ID
-    // -------------------------------
+    // ========================================================
 
     if (studentId !== undefined && String(studentId).trim() !== "") {
       const cleanStudentId = String(studentId).trim();
 
       const duplicateStudent = await User.findOne({
         studentId: cleanStudentId,
+
         _id: {
           $ne: user._id,
         },
@@ -566,25 +702,39 @@ const updateProfile = async (req, res) => {
       user.studentId = cleanStudentId;
     }
 
-    // -------------------------------
+    // ========================================================
     // COLLEGE
-    // -------------------------------
+    // ========================================================
 
     if (college !== undefined) {
       user.college = String(college).trim();
     }
 
-    // -------------------------------
+    // ========================================================
     // LOCATION
-    // -------------------------------
+    // ========================================================
 
     if (location !== undefined) {
       user.location = String(location).trim();
     }
 
-    // -------------------------------
+    // ========================================================
+    // LOCATION COORDINATES
+    // ========================================================
+
+    if (locationCoordinates !== undefined) {
+      const parsedCoordinates = parseLocationCoordinates(locationCoordinates);
+
+      if (parsedCoordinates) {
+        user.locationCoordinates = parsedCoordinates;
+      } else {
+        user.locationCoordinates = null;
+      }
+    }
+
+    // ========================================================
     // PROFILE IMAGE
-    // -------------------------------
+    // ========================================================
 
     if (req.file) {
       try {
@@ -594,8 +744,10 @@ const updateProfile = async (req, res) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
               folder: "campusmart/profile-images",
+
               resource_type: "image",
             },
+
             (error, result) => {
               if (error) {
                 reject(error);
@@ -608,7 +760,10 @@ const updateProfile = async (req, res) => {
           uploadStream.end(req.file.buffer);
         });
 
-        // Delete old Cloudinary image if available
+        // ====================================================
+        // DELETE OLD IMAGE
+        // ====================================================
+
         if (user.profileImage && user.profileImage.includes("cloudinary.com")) {
           try {
             const oldUrl = user.profileImage;
@@ -635,9 +790,6 @@ const updateProfile = async (req, res) => {
               "Old profile image deletion failed:",
               deleteError.message,
             );
-
-            // Do not fail profile update
-            // just because old image deletion failed.
           }
         }
 
@@ -654,11 +806,15 @@ const updateProfile = async (req, res) => {
       }
     }
 
+    // ========================================================
+    // SAVE
+    // ========================================================
+
     await user.save();
 
-    // -------------------------------
-    // COMPLETE UPDATED USER
-    // -------------------------------
+    // ========================================================
+    // UPDATED USER
+    // ========================================================
 
     const updatedUser = {
       id: user._id,
@@ -667,10 +823,16 @@ const updateProfile = async (req, res) => {
       studentId: user.studentId,
       college: user.college,
       location: user.location || "",
+
+      locationCoordinates: user.locationCoordinates || null,
+
       profileImage: user.profileImage || "",
+
       role: user.role,
       isVerified: user.isVerified,
+
       createdAt: user.createdAt,
+
       updatedAt: user.updatedAt,
     };
 
@@ -689,9 +851,10 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// ===============================
+// ============================================================
 // EXPORTS
-// ===============================
+// ============================================================
+
 module.exports = {
   registerUser,
   loginUser,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -8,7 +8,8 @@ import {
   LockKeyhole,
   Mail,
   ShieldCheck,
-  Store,
+  ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 
 import api from "../services/api";
@@ -25,14 +26,29 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState("");
 
   const redirectPath = location.state?.from || "/profile";
 
   /*
-  |--------------------------------------------------------------------------
-  | Input Change
-  |--------------------------------------------------------------------------
+  =========================================================
+  THEME
+  =========================================================
+  */
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("campusmart_theme") || "light";
+
+    document.documentElement.classList.remove("light", "dark");
+
+    document.documentElement.classList.add(savedTheme);
+  }, []);
+
+  /*
+  =========================================================
+  INPUT CHANGE
+  =========================================================
   */
 
   const handleChange = (event) => {
@@ -49,9 +65,9 @@ function Login() {
   };
 
   /*
-  |--------------------------------------------------------------------------
-  | Submit
-  |--------------------------------------------------------------------------
+  =========================================================
+  SUBMIT
+  =========================================================
   */
 
   const handleSubmit = async (event) => {
@@ -108,140 +124,82 @@ function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-76px)] bg-slate-50">
-      <div className="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl lg:grid-cols-2">
-        {/* ============================================================= */}
-        {/* LEFT BRAND PANEL                                               */}
-        {/* ============================================================= */}
+    <main className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-[#f7fbff] px-4 py-10 text-slate-900 transition-colors dark:bg-[#070d18] dark:text-slate-100 sm:px-6">
+      {/* BACKGROUND GLOW */}
 
-        <div className="relative hidden overflow-hidden bg-slate-950 p-12 lg:flex lg:flex-col lg:justify-between">
-          {/* Background decoration */}
+      <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl dark:bg-blue-500/10" />
 
-          <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-100/50 blur-3xl dark:bg-indigo-500/10" />
 
-          <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />
+      <div className="relative mx-auto flex min-h-[calc(100vh-152px)] max-w-md items-center justify-center">
+        <div className="w-full">
+          {/* =================================================
+              BRAND
+          ================================================== */}
 
-          <div className="relative">
-            <Link to="/" className="inline-flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
-                <Store size={22} className="text-slate-950" />
+          <div className="mb-7 flex justify-center">
+            <Link to="/" className="group inline-flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-100 transition group-hover:-translate-y-0.5 dark:shadow-blue-950/40">
+                <ShoppingBag size={23} className="text-white" />
               </div>
 
               <div>
-                <p className="text-lg font-extrabold text-white">
-                  CampusMart
-                  <span className="text-blue-400">AI</span>
+                <p className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
+                  Campus
+                  <span className="text-blue-600 dark:text-blue-400">Mart</span>
+                  <span className="ml-1 text-xs text-indigo-500 dark:text-indigo-400">
+                    AI
+                  </span>
                 </p>
 
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                   Campus Marketplace
                 </p>
               </div>
             </Link>
           </div>
 
-          <div className="relative max-w-lg">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300">
-              <ShieldCheck size={14} className="text-blue-400" />
-              Built for verified students
-            </div>
+          {/* =================================================
+              CARD
+          ================================================== */}
 
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-white xl:text-5xl">
-              Your campus.
-              <br />
-              Your marketplace.
-            </h1>
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_70px_rgba(37,99,235,0.10)] transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_70px_rgba(0,0,0,0.45)] sm:p-8">
+            {/* HEADER */}
 
-            <p className="mt-5 max-w-md text-base leading-7 text-slate-400">
-              Buy, sell, exchange and rent products within your student
-              community with smarter AI-powered recommendations.
-            </p>
-
-            <div className="mt-8 grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xl font-bold text-white">Buy</p>
-
-                <p className="mt-1 text-xs text-slate-500">Student products</p>
+            <div className="text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                <Sparkles size={20} />
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xl font-bold text-white">Sell</p>
+              <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
+                Welcome back
+              </p>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Earn from unused items
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xl font-bold text-white">AI</p>
-
-                <p className="mt-1 text-xs text-slate-500">Smarter decisions</p>
-              </div>
-            </div>
-          </div>
-
-          <p className="relative text-xs font-medium text-slate-600">
-            Secure student marketplace
-          </p>
-        </div>
-
-        {/* ============================================================= */}
-        {/* RIGHT LOGIN FORM                                                */}
-        {/* ============================================================= */}
-
-        <div className="flex items-center justify-center px-5 py-12 sm:px-8">
-          <div className="w-full max-w-md">
-            {/* Mobile Logo */}
-
-            <div className="mb-10 flex justify-center lg:hidden">
-              <Link to="/" className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950">
-                  <Store size={22} className="text-white" />
-                </div>
-
-                <div>
-                  <p className="text-lg font-extrabold text-slate-950">
-                    CampusMart
-                    <span className="text-blue-600">AI</span>
-                  </p>
-
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Campus Marketplace
-                  </p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Heading */}
-
-            <div>
-              <p className="text-sm font-bold text-blue-600">Welcome back</p>
-
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
                 Sign in to CampusMart
-              </h2>
+              </h1>
 
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Access your marketplace account and continue where you left off.
+              <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Access your student marketplace account.
               </p>
             </div>
 
-            {/* Form */}
+            {/* FORM */}
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {/* Email */}
+            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+              {/* EMAIL */}
 
               <div>
                 <label
                   htmlFor="email"
-                  className="mb-2 block text-sm font-bold text-slate-800"
+                  className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
                 >
                   Email address
                 </label>
 
                 <div className="relative">
                   <Mail
-                    size={18}
+                    size={17}
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   />
 
@@ -253,25 +211,25 @@ function Login() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="you@example.com"
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-800 dark:focus:ring-blue-500/10"
                   />
                 </div>
               </div>
 
-              {/* Password */}
+              {/* PASSWORD */}
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label
                     htmlFor="password"
-                    className="block text-sm font-bold text-slate-800"
+                    className="block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
                   >
                     Password
                   </label>
 
                   <Link
                     to="/forgot-password"
-                    className="text-xs font-bold text-blue-600 transition hover:text-blue-700"
+                    className="text-xs font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     Forgot password?
                   </Link>
@@ -279,7 +237,7 @@ function Login() {
 
                 <div className="relative">
                   <LockKeyhole
-                    size={18}
+                    size={17}
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   />
 
@@ -291,13 +249,13 @@ function Login() {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Enter your password"
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-12 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-800 dark:focus:ring-blue-500/10"
                   />
 
                   <button
                     type="button"
                     onClick={() => setShowPassword((previous) => !previous)}
-                    className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
@@ -309,20 +267,20 @@ function Login() {
                 </div>
               </div>
 
-              {/* Error */}
+              {/* ERROR */}
 
               {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-5 text-red-700">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
                   {error}
                 </div>
               )}
 
-              {/* Submit */}
+              {/* SUBMIT */}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-600 hover:shadow-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-blue-950/40"
               >
                 {loading ?
                   <>
@@ -340,28 +298,28 @@ function Login() {
               </button>
             </form>
 
-            {/* Register */}
+            {/* REGISTER */}
 
-            <div className="mt-7 text-center text-sm text-slate-500">
+            <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
               Don't have an account?{" "}
               <Link
                 to="/register"
-                className="font-bold text-blue-600 transition hover:text-blue-700"
+                className="font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 Create one
               </Link>
             </div>
 
-            {/* Security */}
+            {/* SECURITY */}
 
-            <div className="mt-8 flex items-center justify-center gap-2 text-xs font-medium text-slate-400">
-              <ShieldCheck size={14} />
-              Your account is protected with secure authentication
+            <div className="mt-5 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              <ShieldCheck size={14} className="text-emerald-500" />
+              Secure student authentication
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -1,22 +1,29 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
   ArrowRight,
+  Camera,
+  CheckCircle2,
   Eye,
   EyeOff,
+  ImagePlus,
+  Loader2,
   LockKeyhole,
   Mail,
   MapPin,
   ShieldCheck,
-  Store,
+  ShoppingBag,
   User,
+  X,
 } from "lucide-react";
 
 import api from "../services/api";
+import LocationPicker from "../components/LocationPicker";
 
 function Register() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -27,17 +34,32 @@ function Register() {
     location: "",
   });
 
+  const [locationCoordinates, setLocationCoordinates] = useState(null);
+
+  const [profileImage, setProfileImage] = useState(null);
+  const [preview, setPreview] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /*
-  |--------------------------------------------------------------------------
-  | Input Change
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     THEME SAFETY
+  ========================================================== */
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("campusmart_theme") || "light";
+
+    document.documentElement.classList.remove("light", "dark");
+
+    document.documentElement.classList.add(savedTheme);
+  }, []);
+
+  /* =========================================================
+     INPUT CHANGE
+  ========================================================== */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -50,19 +72,60 @@ function Register() {
     if (error) {
       setError("");
     }
+
+    if (success) {
+      setSuccess("");
+    }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Submit
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     IMAGE
+  ========================================================== */
+
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profile picture must be smaller than 5MB.");
+      return;
+    }
+
+    setProfileImage(file);
+    setPreview(URL.createObjectURL(file));
+
+    setError("");
+    setSuccess("");
+  };
+
+  const removeImage = () => {
+    setProfileImage(null);
+    setPreview("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  /* =========================================================
+     SUBMIT
+  ========================================================== */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError("");
     setSuccess("");
+
+    /* Basic validation */
 
     if (!formData.name.trim()) {
       setError("Please enter your full name.");
@@ -79,6 +142,11 @@ function Register() {
       return;
     }
 
+    if (!formData.location.trim()) {
+      setError("Please select your campus location.");
+      return;
+    }
+
     if (!formData.password) {
       setError("Please create a password.");
       return;
@@ -92,6 +160,10 @@ function Register() {
     try {
       setLoading(true);
 
+      /* =====================================================
+         REGISTER
+      ====================================================== */
+
       const response = await api.post("/auth/register", {
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -99,11 +171,23 @@ function Register() {
         college: formData.college.trim(),
         studentId: formData.studentId.trim(),
         location: formData.location.trim(),
+
+        locationCoordinates:
+          locationCoordinates ?
+            {
+              lat: Number(locationCoordinates.lat),
+              lng: Number(locationCoordinates.lng),
+            }
+          : null,
       });
 
       const token = response.data?.token || response.data?.accessToken;
 
-      const user = response.data?.user || response.data?.data?.user;
+      let user = response.data?.user || response.data?.data?.user;
+
+      /* =====================================================
+         TOKEN RECEIVED
+      ====================================================== */
 
       if (token) {
         localStorage.setItem("campusmart_token", token);
@@ -112,12 +196,70 @@ function Register() {
           localStorage.setItem("campusmart_user", JSON.stringify(user));
         }
 
-        navigate("/profile", {
-          replace: true,
-        });
+        /* ===================================================
+           PROFILE IMAGE + LOCATION SYNC
+        ==================================================== */
+
+        try {
+          const imageData = new FormData();
+
+          if (profileImage) {
+            imageData.append("profileImage", profileImage);
+          }
+
+          imageData.append("name", formData.name.trim());
+
+          imageData.append("studentId", formData.studentId.trim());
+
+          imageData.append("college", formData.college.trim());
+
+          imageData.append("location", formData.location.trim());
+
+          if (locationCoordinates) {
+            imageData.append(
+              "locationCoordinates",
+              JSON.stringify({
+                lat: Number(locationCoordinates.lat),
+                lng: Number(locationCoordinates.lng),
+              }),
+            );
+          }
+
+          const profileResponse = await api.put("/auth/profile", imageData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+
+          user = profileResponse.data?.user || user;
+
+          if (user) {
+            localStorage.setItem("campusmart_user", JSON.stringify(user));
+          }
+        } catch (profileError) {
+          /*
+           * Account was successfully created.
+           * Profile/image sync failure should not
+           * cancel the registration.
+           */
+
+          console.error("Profile Sync Error:", profileError);
+        }
+
+        setSuccess("Account created successfully. Redirecting...");
+
+        setTimeout(() => {
+          navigate("/profile", {
+            replace: true,
+          });
+        }, 900);
 
         return;
       }
+
+      /* =====================================================
+         NO TOKEN
+      ====================================================== */
 
       setSuccess("Account created successfully. Redirecting to sign in...");
 
@@ -138,374 +280,398 @@ function Register() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-76px)] bg-slate-50">
-      <div className="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl lg:grid-cols-2">
-        {/* ============================================================= */}
-        {/* LEFT PANEL                                                     */}
-        {/* ============================================================= */}
+    <main className="min-h-[calc(100vh-72px)] bg-[#f7fbff] px-4 py-8 text-slate-900 transition-colors dark:bg-[#070d18] dark:text-slate-100 sm:px-6">
+      <div className="mx-auto max-w-2xl">
+        {/* =====================================================
+            BRAND
+        ====================================================== */}
 
-        <div className="relative hidden overflow-hidden bg-blue-600 p-12 lg:flex lg:flex-col lg:justify-between">
-          <div className="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-
-          <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-slate-950/20 blur-3xl" />
-
-          <div className="relative">
-            <Link to="/" className="inline-flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
-                <Store size={22} className="text-blue-600" />
-              </div>
-
-              <div>
-                <p className="text-lg font-extrabold text-white">
-                  CampusMart
-                  <span className="text-blue-200">AI</span>
-                </p>
-
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">
-                  Campus Marketplace
-                </p>
-              </div>
-            </Link>
-          </div>
-
-          <div className="relative">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white">
-              <ShieldCheck size={14} />
-              Student-first marketplace
+        <div className="mb-6 flex justify-center">
+          <Link to="/" className="group inline-flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-100 transition group-hover:-translate-y-0.5 dark:shadow-blue-950/40">
+              <ShoppingBag size={21} className="text-white" />
             </div>
-
-            <h1 className="max-w-lg text-4xl font-extrabold leading-tight tracking-tight text-white xl:text-5xl">
-              Turn unused things into
-              <span className="text-blue-100"> value.</span>
-            </h1>
-
-            <p className="mt-5 max-w-md text-base leading-7 text-blue-100">
-              Create your account and connect with students around your campus
-              to buy, sell, exchange and rent.
-            </p>
-
-            <div className="mt-8 space-y-3">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                  <ShieldCheck size={18} className="text-white" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    Student-focused
-                  </p>
-
-                  <p className="text-xs text-blue-100">
-                    Designed around campus life
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                  <Store size={18} className="text-white" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    Buy & sell locally
-                  </p>
-
-                  <p className="text-xs text-blue-100">
-                    Convenient campus pickup
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="relative text-xs font-medium text-blue-200">
-            CampusMart AI
-          </p>
-        </div>
-
-        {/* ============================================================= */}
-        {/* RIGHT FORM                                                     */}
-        {/* ============================================================= */}
-
-        <div className="flex items-center justify-center px-5 py-10 sm:px-8">
-          <div className="w-full max-w-xl">
-            {/* Mobile Logo */}
-
-            <div className="mb-8 flex justify-center lg:hidden">
-              <Link to="/" className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950">
-                  <Store size={22} className="text-white" />
-                </div>
-
-                <div>
-                  <p className="text-lg font-extrabold text-slate-950">
-                    CampusMart
-                    <span className="text-blue-600">AI</span>
-                  </p>
-
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Campus Marketplace
-                  </p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Heading */}
 
             <div>
-              <p className="text-sm font-bold text-blue-600">Join CampusMart</p>
+              <p className="text-[19px] font-black tracking-tight text-slate-950 dark:text-white">
+                Campus
+                <span className="text-blue-600 dark:text-blue-400">Mart</span>
+                <span className="ml-1 text-xs text-indigo-500 dark:text-indigo-400">
+                  AI
+                </span>
+              </p>
 
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">
-                Create your account
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Set up your student profile and start using your campus
-                marketplace.
+              <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                Campus Marketplace
               </p>
             </div>
+          </Link>
+        </div>
 
-            {/* Form */}
+        {/* =====================================================
+            CARD
+        ====================================================== */}
 
-            <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Name */}
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_70px_rgba(37,99,235,0.10)] transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_70px_rgba(0,0,0,0.40)] sm:p-8">
+          {/* HEADER */}
 
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="mb-2 block text-sm font-bold text-slate-800"
-                  >
-                    Full name
-                  </label>
+          <div className="text-center">
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
+              Join CampusMart
+            </p>
 
-                  <div className="relative">
-                    <User
-                      size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Create your account
+            </h1>
+
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Set up your student profile in a few steps.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            {/* =================================================
+                PROFILE IMAGE
+            ================================================== */}
+
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-blue-200 bg-blue-50 dark:border-slate-700 dark:bg-slate-800">
+                  {preview ?
+                    <img
+                      src={preview}
+                      alt="Profile preview"
+                      className="h-full w-full object-cover"
                     />
+                  : <div className="text-center">
+                      <ImagePlus
+                        size={24}
+                        className="mx-auto text-blue-500 dark:text-blue-400"
+                      />
 
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      autoComplete="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Your full name"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                    />
-                  </div>
+                      <p className="mt-1 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        Profile
+                      </p>
+                    </div>
+                  }
                 </div>
 
-                {/* Student ID */}
-
-                <div>
-                  <label
-                    htmlFor="studentId"
-                    className="mb-2 block text-sm font-bold text-slate-800"
+                {preview ?
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition hover:bg-red-600"
+                    aria-label="Remove image"
                   >
-                    Student ID
-                  </label>
-
-                  <input
-                    id="studentId"
-                    name="studentId"
-                    type="text"
-                    value={formData.studentId}
-                    onChange={handleChange}
-                    placeholder="College student ID"
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                  />
-                </div>
+                    <X size={14} />
+                  </button>
+                : <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:shadow-blue-950/40"
+                    aria-label="Upload profile picture"
+                  >
+                    <Camera size={16} />
+                  </button>
+                }
               </div>
 
-              {/* Email */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-3 text-xs font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {preview ? "Change profile picture" : "Add profile picture"}
+              </button>
+
+              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                JPG, PNG or WEBP · Max 5MB
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* =================================================
+                BASIC INFORMATION
+            ================================================== */}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* NAME */}
 
               <div>
                 <label
-                  htmlFor="email"
-                  className="mb-2 block text-sm font-bold text-slate-800"
+                  htmlFor="name"
+                  className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
                 >
-                  Email address
+                  Full name
                 </label>
 
                 <div className="relative">
-                  <Mail
+                  <User
                     size={17}
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                   />
 
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={formData.email}
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    value={formData.name}
                     onChange={handleChange}
-                    placeholder="you@example.com"
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                    placeholder="Your full name"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:bg-slate-800 dark:focus:ring-blue-950/40"
                   />
                 </div>
               </div>
 
-              {/* College */}
+              {/* STUDENT ID */}
 
               <div>
                 <label
-                  htmlFor="college"
-                  className="mb-2 block text-sm font-bold text-slate-800"
+                  htmlFor="studentId"
+                  className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
                 >
-                  College
+                  Student ID
                 </label>
 
                 <input
-                  id="college"
-                  name="college"
+                  id="studentId"
+                  name="studentId"
                   type="text"
-                  value={formData.college}
+                  value={formData.studentId}
                   onChange={handleChange}
-                  placeholder="Your college"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                  placeholder="College student ID"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:ring-blue-950/40"
                 />
               </div>
+            </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Location */}
+            {/* =================================================
+                EMAIL
+            ================================================== */}
 
-                <div>
-                  <label
-                    htmlFor="location"
-                    className="mb-2 block text-sm font-bold text-slate-800"
-                  >
-                    Campus / Location
-                  </label>
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
+              >
+                Email address
+              </label>
 
-                  <div className="relative">
-                    <MapPin
-                      size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
+              <div className="relative">
+                <Mail
+                  size={17}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
 
-                    <input
-                      id="location"
-                      name="location"
-                      type="text"
-                      value={formData.location}
-                      onChange={handleChange}
-                      placeholder="Campus location"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="mb-2 block text-sm font-bold text-slate-800"
-                  >
-                    Password
-                  </label>
-
-                  <div className="relative">
-                    <LockKeyhole
-                      size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Minimum 6 characters"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-11 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((previous) => !previous)}
-                      className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-                    >
-                      {showPassword ?
-                        <EyeOff size={16} />
-                      : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:ring-blue-950/40"
+                />
               </div>
+            </div>
 
-              {/* Error */}
+            {/* =================================================
+                COLLEGE
+            ================================================== */}
 
-              {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-5 text-red-700">
-                  {error}
-                </div>
-              )}
+            <div>
+              <label
+                htmlFor="college"
+                className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
+              >
+                College
+              </label>
 
-              {/* Success */}
+              <input
+                id="college"
+                name="college"
+                type="text"
+                value={formData.college}
+                onChange={handleChange}
+                placeholder="Your college"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:ring-blue-950/40"
+              />
+            </div>
 
-              {success && (
-                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold leading-5 text-green-700">
-                  {success}
-                </div>
-              )}
+            {/* =================================================
+                LOCATION
+            ================================================== */}
 
-              {/* Terms */}
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                Campus / Location
+              </label>
 
-              <p className="text-xs leading-5 text-slate-400">
-                By creating an account, you agree to use CampusMart responsibly
-                and follow your campus marketplace guidelines.
+              <p className="mb-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Search your campus or use your current location.
               </p>
 
-              {/* Submit */}
+              <LocationPicker
+                value={formData.location}
+                onChange={(location) => {
+                  setFormData((previous) => ({
+                    ...previous,
+                    location,
+                  }));
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-blue-600 hover:shadow-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ?
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Creating account...
-                  </>
-                : <>
-                    Create account
-                    <ArrowRight
-                      size={17}
-                      className="transition group-hover:translate-x-0.5"
-                    />
-                  </>
-                }
-              </button>
-            </form>
+                  setError("");
+                  setSuccess("");
+                }}
+                coordinates={locationCoordinates}
+                onCoordinatesChange={setLocationCoordinates}
+                placeholder="Search campus, building, area or street"
+                required
+                showMap={false}
+              />
 
-            {/* Login */}
+              {locationCoordinates && (
+                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 size={15} />
+                    Location coordinates saved
+                  </div>
 
-            <div className="mt-6 text-center text-sm text-slate-500">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                className="font-bold text-blue-600 transition hover:text-blue-700"
-              >
-                Sign in
-              </Link>
+                  <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                    GPS: {Number(locationCoordinates.lat).toFixed(6)},{" "}
+                    {Number(locationCoordinates.lng).toFixed(6)}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-slate-400">
-              <ShieldCheck size={14} />
-              Your student account is securely authenticated
+            {/* =================================================
+                PASSWORD
+            ================================================== */}
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300"
+              >
+                Password
+              </label>
+
+              <div className="relative">
+                <LockKeyhole
+                  size={17}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Minimum 6 characters"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-500 dark:focus:ring-blue-950/40"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ?
+                    <EyeOff size={16} />
+                  : <Eye size={16} />}
+                </button>
+              </div>
             </div>
+
+            {/* =================================================
+                ERROR
+            ================================================== */}
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+                <X size={17} className="mt-0.5 shrink-0" />
+
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* =================================================
+                SUCCESS
+            ================================================== */}
+
+            {success && (
+              <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
+
+                <span>{success}</span>
+              </div>
+            )}
+
+            {/* SECURITY NOTE */}
+
+            <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+              <ShieldCheck
+                size={15}
+                className="mt-0.5 shrink-0 text-emerald-500"
+              />
+
+              <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                Create a verified student account and use CampusMart
+                responsibly.
+              </p>
+            </div>
+
+            {/* =================================================
+                SUBMIT
+            ================================================== */}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-blue-950/40"
+            >
+              {loading ?
+                <>
+                  <Loader2 size={17} className="animate-spin" />
+                  Creating account...
+                </>
+              : <>
+                  Create account
+                  <ArrowRight
+                    size={17}
+                    className="transition group-hover:translate-x-0.5"
+                  />
+                </>
+              }
+            </button>
+          </form>
+
+          {/* LOGIN LINK */}
+
+          <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Sign in
+            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
