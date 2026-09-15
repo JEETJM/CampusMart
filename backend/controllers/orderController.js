@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 
 // ===============================
 // GENERATE ORDER NUMBER
