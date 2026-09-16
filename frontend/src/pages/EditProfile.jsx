@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -20,8 +20,25 @@ import LocationPicker from "../components/LocationPicker";
 
 function EditProfile() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fileInputRef = useRef(null);
+
+  // ==========================================================
+  // DETECT ADMIN PROFILE EDIT
+  // ==========================================================
+
+  const isAdminProfileEdit = location.pathname.startsWith(
+    "/admin/profile/edit",
+  );
+
+  const profilePath = isAdminProfileEdit ? "/admin/profile" : "/profile";
+
+  const loginPath = isAdminProfileEdit ? "/admin/login" : "/login";
+
+  // ==========================================================
+  // STATE
+  // ==========================================================
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,16 +61,24 @@ function EditProfile() {
 
   const [error, setError] = useState("");
 
-  /* =========================================================
-     LOAD USER
-  ========================================================= */
+  // ==========================================================
+  // LOAD USER
+  // ==========================================================
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem("campusmart_token");
+      const studentToken = localStorage.getItem("campusmart_token");
 
-      if (!token) {
-        navigate("/login", {
+      const adminToken = localStorage.getItem("campusmart_admin_token");
+
+      const selectedToken = isAdminProfileEdit ? adminToken : studentToken;
+
+      // --------------------------------------------------------
+      // TOKEN CHECK
+      // --------------------------------------------------------
+
+      if (!selectedToken) {
+        navigate(loginPath, {
           replace: true,
         });
 
@@ -71,6 +96,20 @@ function EditProfile() {
           throw new Error("User data not found.");
         }
 
+        // ------------------------------------------------------
+        // ROLE VALIDATION
+        // ------------------------------------------------------
+
+        const currentRole = String(currentUser.role || "").toLowerCase();
+
+        if (isAdminProfileEdit && currentRole !== "admin") {
+          throw new Error("Admin account required.");
+        }
+
+        if (!isAdminProfileEdit && currentRole === "admin") {
+          throw new Error("Admin account detected.");
+        }
+
         setUser(currentUser);
 
         setFormData({
@@ -82,9 +121,9 @@ function EditProfile() {
 
         setPreview(currentUser.profileImage || "");
 
-        /* =====================================================
-           EXISTING LOCATION COORDINATES
-        ===================================================== */
+        // ------------------------------------------------------
+        // EXISTING LOCATION COORDINATES
+        // ------------------------------------------------------
 
         if (
           currentUser.locationCoordinates &&
@@ -102,15 +141,32 @@ function EditProfile() {
           }
         }
 
-        localStorage.setItem("campusmart_user", JSON.stringify(currentUser));
+        // ------------------------------------------------------
+        // SAVE CORRECT SESSION
+        // ------------------------------------------------------
+
+        if (isAdminProfileEdit) {
+          localStorage.setItem(
+            "campusmart_admin_user",
+            JSON.stringify(currentUser),
+          );
+        } else {
+          localStorage.setItem("campusmart_user", JSON.stringify(currentUser));
+        }
       } catch (err) {
         console.error("Edit Profile Load Error:", err);
 
-        localStorage.removeItem("campusmart_token");
+        if (isAdminProfileEdit) {
+          localStorage.removeItem("campusmart_admin_token");
 
-        localStorage.removeItem("campusmart_user");
+          localStorage.removeItem("campusmart_admin_user");
+        } else {
+          localStorage.removeItem("campusmart_token");
 
-        navigate("/login", {
+          localStorage.removeItem("campusmart_user");
+        }
+
+        navigate(loginPath, {
           replace: true,
         });
       } finally {
@@ -119,11 +175,11 @@ function EditProfile() {
     };
 
     fetchUser();
-  }, [navigate]);
+  }, [navigate, isAdminProfileEdit, loginPath]);
 
-  /* =========================================================
-     INPUT CHANGE
-  ========================================================= */
+  // ==========================================================
+  // INPUT CHANGE
+  // ==========================================================
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -137,9 +193,9 @@ function EditProfile() {
     setSuccess("");
   };
 
-  /* =========================================================
-     IMAGE SELECT
-  ========================================================= */
+  // ==========================================================
+  // IMAGE SELECT
+  // ==========================================================
 
   const handleImageChange = (event) => {
     const file = event.target.files?.[0];
@@ -170,9 +226,9 @@ function EditProfile() {
     setPreview(objectUrl);
   };
 
-  /* =========================================================
-     REMOVE NEW IMAGE
-  ========================================================= */
+  // ==========================================================
+  // REMOVE NEW IMAGE
+  // ==========================================================
 
   const handleRemoveSelectedImage = () => {
     setSelectedFile(null);
@@ -184,9 +240,9 @@ function EditProfile() {
     }
   };
 
-  /* =========================================================
-     SAVE PROFILE
-  ========================================================= */
+  // ==========================================================
+  // SAVE PROFILE
+  // ==========================================================
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -229,9 +285,9 @@ function EditProfile() {
 
       data.append("location", formData.location.trim());
 
-      /* =====================================================
-         LOCATION COORDINATES
-      ===================================================== */
+      // --------------------------------------------------------
+      // LOCATION COORDINATES
+      // --------------------------------------------------------
 
       data.append(
         "locationCoordinates",
@@ -241,9 +297,9 @@ function EditProfile() {
         }),
       );
 
-      /* =====================================================
-         PROFILE IMAGE
-      ===================================================== */
+      // --------------------------------------------------------
+      // PROFILE IMAGE
+      // --------------------------------------------------------
 
       if (selectedFile) {
         data.append("profileImage", selectedFile);
@@ -261,6 +317,10 @@ function EditProfile() {
         throw new Error("Updated user data was not returned.");
       }
 
+      // --------------------------------------------------------
+      // UPDATE STATE
+      // --------------------------------------------------------
+
       setUser(updatedUser);
 
       setFormData({
@@ -272,9 +332,9 @@ function EditProfile() {
 
       setPreview(updatedUser.profileImage || "");
 
-      /* =====================================================
-         UPDATED COORDINATES
-      ===================================================== */
+      // --------------------------------------------------------
+      // UPDATED COORDINATES
+      // --------------------------------------------------------
 
       if (updatedUser.locationCoordinates) {
         const lat = Number(updatedUser.locationCoordinates.lat);
@@ -295,16 +355,27 @@ function EditProfile() {
         fileInputRef.current.value = "";
       }
 
-      /* =====================================================
-         LOCAL STORAGE
-      ===================================================== */
+      // --------------------------------------------------------
+      // SAVE CORRECT LOCAL STORAGE
+      // --------------------------------------------------------
 
-      localStorage.setItem("campusmart_user", JSON.stringify(updatedUser));
+      if (isAdminProfileEdit) {
+        localStorage.setItem(
+          "campusmart_admin_user",
+          JSON.stringify(updatedUser),
+        );
+      } else {
+        localStorage.setItem("campusmart_user", JSON.stringify(updatedUser));
+      }
 
       setSuccess("Profile updated successfully.");
 
+      // --------------------------------------------------------
+      // REDIRECT TO CORRECT PROFILE
+      // --------------------------------------------------------
+
       setTimeout(() => {
-        navigate("/profile", {
+        navigate(profilePath, {
           replace: true,
         });
       }, 1000);
@@ -317,9 +388,9 @@ function EditProfile() {
     }
   };
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
+  // ==========================================================
+  // LOADING
+  // ==========================================================
 
   if (loading) {
     return (
@@ -335,6 +406,10 @@ function EditProfile() {
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-[#f6f8fc] text-slate-900 dark:bg-[#070d18] dark:text-slate-100">
       {/* =====================================================
@@ -344,7 +419,7 @@ function EditProfile() {
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link
-            to="/profile"
+            to={profilePath}
             className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <ArrowLeft size={17} />
@@ -353,7 +428,10 @@ function EditProfile() {
 
           <div className="hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
             <ShieldCheck size={14} />
-            Secure Account Settings
+
+            {isAdminProfileEdit ?
+              "Admin Account Settings"
+            : "Secure Account Settings"}
           </div>
         </div>
       </header>
@@ -367,7 +445,7 @@ function EditProfile() {
 
         <div className="mb-7">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
-            Account Settings
+            {isAdminProfileEdit ? "Administrator Settings" : "Account Settings"}
           </p>
 
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
@@ -375,7 +453,10 @@ function EditProfile() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Update your student identity, profile image, and campus location.
+            {isAdminProfileEdit ?
+              "Update your CampusMart administrator profile and account information."
+            : "Update your student identity, profile image, and campus location."
+            }
           </p>
         </div>
 
@@ -384,7 +465,6 @@ function EditProfile() {
         {success && (
           <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle2 size={18} />
-
             {success}
           </div>
         )}
@@ -417,14 +497,12 @@ function EditProfile() {
             <div className="h-28 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900" />
 
             <div className="-mt-14 px-6 pb-6">
-              {/* IMAGE */}
-
               <div className="relative mx-auto h-28 w-28">
                 <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-gradient-to-br from-blue-100 to-indigo-100 shadow-xl dark:border-slate-800 dark:from-slate-800 dark:to-slate-700">
                   {preview ?
                     <img
                       src={preview}
-                      alt={user?.name || "Profile"}
+                      alt={user.name || "Profile"}
                       className="h-full w-full object-cover"
                     />
                   : <User
@@ -446,17 +524,20 @@ function EditProfile() {
 
               <div className="mt-5 text-center">
                 <h2 className="font-bold text-slate-950 dark:text-white">
-                  {user?.name || "Your Name"}
+                  {user.name || "Your Name"}
                 </h2>
 
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  CampusMart Student
+                  {isAdminProfileEdit ?
+                    "CampusMart Administrator"
+                  : "CampusMart Student"}
                 </p>
 
-                {user?.isVerified && (
+                {user.isVerified && (
                   <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
                     <BadgeCheck size={14} />
-                    Verified Student
+
+                    {isAdminProfileEdit ? "Verified Admin" : "Verified Student"}
                   </div>
                 )}
               </div>
@@ -516,7 +597,9 @@ function EditProfile() {
           <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.5)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_60px_-40px_rgba(0,0,0,0.65)] sm:p-8">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
-                Student Information
+                {isAdminProfileEdit ?
+                  "Administrator Information"
+                : "Student Information"}
               </p>
 
               <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
@@ -568,7 +651,7 @@ function EditProfile() {
 
                   <input
                     type="email"
-                    value={user?.email || ""}
+                    value={user.email || ""}
                     disabled
                     className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3.5 pl-11 pr-4 text-sm font-medium text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
                   />
@@ -579,11 +662,11 @@ function EditProfile() {
                 </p>
               </div>
 
-              {/* STUDENT ID */}
+              {/* STUDENT / ADMIN ID */}
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Student ID
+                  {isAdminProfileEdit ? "Admin ID" : "Student ID"}
                 </label>
 
                 <div className="relative">
@@ -597,7 +680,7 @@ function EditProfile() {
                     name="studentId"
                     value={formData.studentId}
                     onChange={handleChange}
-                    placeholder="Student ID"
+                    placeholder={isAdminProfileEdit ? "Admin ID" : "Student ID"}
                     className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
@@ -627,9 +710,7 @@ function EditProfile() {
                 </div>
               </div>
 
-              {/* =================================================
-                  CURRENT LOCATION
-              ================================================== */}
+              {/* LOCATION */}
 
               <div className="sm:col-span-2">
                 <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -652,10 +733,10 @@ function EditProfile() {
 
                 <LocationPicker
                   value={formData.location}
-                  onChange={(location) => {
+                  onChange={(locationValue) => {
                     setFormData((prev) => ({
                       ...prev,
-                      location,
+                      location: locationValue,
                     }));
 
                     setError("");
@@ -688,13 +769,11 @@ function EditProfile() {
               </div>
             </div>
 
-            {/* =================================================
-                SAVE
-            ================================================== */}
+            {/* SAVE */}
 
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 dark:border-slate-800 sm:flex-row sm:justify-end">
               <Link
-                to="/profile"
+                to={profilePath}
                 className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancel

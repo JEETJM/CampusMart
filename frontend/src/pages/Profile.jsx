@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   ArrowRight,
@@ -29,20 +29,52 @@ import api from "../services/api";
 
 function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ==========================================================
+  // ADMIN PROFILE DETECTION
+  // ==========================================================
+
+  const isAdminProfile = location.pathname === "/admin/profile";
+
+  const profilePath = isAdminProfile ? "/admin/profile" : "/profile";
+
+  const editProfilePath =
+    isAdminProfile ? "/admin/profile/edit" : "/profile/edit";
+
+  const loginPath = isAdminProfile ? "/admin/login" : "/login";
+
+  // ==========================================================
+  // STATE
+  // ==========================================================
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* =========================================================
-     FETCH CURRENT USER
-  ========================================================= */
+  // ==========================================================
+  // FETCH CURRENT USER
+  // ==========================================================
 
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const token = localStorage.getItem("campusmart_token");
+    let cancelled = false;
 
-      if (!token) {
-        navigate("/login", {
+    const fetchCurrentUser = async () => {
+      // --------------------------------------------------------
+      // GET BOTH TOKENS
+      // --------------------------------------------------------
+
+      const studentToken = localStorage.getItem("campusmart_token");
+
+      const adminToken = localStorage.getItem("campusmart_admin_token");
+
+      // --------------------------------------------------------
+      // SELECT CORRECT TOKEN
+      // --------------------------------------------------------
+
+      const selectedToken = isAdminProfile ? adminToken : studentToken;
+
+      if (!selectedToken) {
+        navigate(loginPath, {
           replace: true,
         });
 
@@ -50,9 +82,20 @@ function Profile() {
       }
 
       try {
-        setLoading(true);
+        if (!cancelled) {
+          setLoading(true);
+        }
 
-        const response = await api.get("/auth/me");
+        // ======================================================
+        // IMPORTANT:
+        // Explicit Authorization header
+        // ======================================================
+
+        const response = await api.get("/auth/me", {
+          headers: {
+            Authorization: `Bearer ${selectedToken}`,
+          },
+        });
 
         const currentUser = response.data?.user;
 
@@ -60,44 +103,103 @@ function Profile() {
           throw new Error("User information not found.");
         }
 
-        setUser(currentUser);
+        // ======================================================
+        // ROLE CHECK
+        // ======================================================
 
-        localStorage.setItem("campusmart_user", JSON.stringify(currentUser));
+        const currentRole = String(currentUser.role || "").toLowerCase();
+
+        // Admin page must return admin
+        if (isAdminProfile && currentRole !== "admin") {
+          throw new Error("Admin account required.");
+        }
+
+        // Student page must NOT return admin
+        if (!isAdminProfile && currentRole === "admin") {
+          throw new Error("Admin account detected. Please use Admin Login.");
+        }
+
+        // ======================================================
+        // UPDATE STATE
+        // ======================================================
+
+        if (!cancelled) {
+          setUser(currentUser);
+        }
+
+        // ======================================================
+        // SAVE CORRECT USER SESSION
+        // ======================================================
+
+        if (isAdminProfile) {
+          localStorage.setItem(
+            "campusmart_admin_user",
+            JSON.stringify(currentUser),
+          );
+        } else {
+          localStorage.setItem("campusmart_user", JSON.stringify(currentUser));
+        }
       } catch (error) {
         console.error("Profile Error:", error);
 
-        localStorage.removeItem("campusmart_token");
+        // ======================================================
+        // CLEAR ONLY CURRENT SESSION
+        // ======================================================
 
-        localStorage.removeItem("campusmart_user");
+        if (isAdminProfile) {
+          localStorage.removeItem("campusmart_admin_token");
 
-        navigate("/login", {
+          localStorage.removeItem("campusmart_admin_user");
+        } else {
+          localStorage.removeItem("campusmart_token");
+
+          localStorage.removeItem("campusmart_user");
+        }
+
+        navigate(loginPath, {
           replace: true,
         });
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCurrentUser();
-  }, [navigate]);
 
-  /* =========================================================
-     LOGOUT
-  ========================================================= */
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, isAdminProfile, loginPath]);
+
+  // ==========================================================
+  // LOGOUT
+  // ==========================================================
 
   const handleLogout = () => {
-    localStorage.removeItem("campusmart_token");
+    if (isAdminProfile) {
+      localStorage.removeItem("campusmart_admin_token");
 
-    localStorage.removeItem("campusmart_user");
+      localStorage.removeItem("campusmart_admin_user");
 
-    navigate("/login", {
-      replace: true,
-    });
+      navigate("/admin/login", {
+        replace: true,
+      });
+    } else {
+      localStorage.removeItem("campusmart_token");
+
+      localStorage.removeItem("campusmart_user");
+
+      navigate("/login", {
+        replace: true,
+      });
+    }
   };
 
-  /* =========================================================
-     MEMBER SINCE
-  ========================================================= */
+  // ==========================================================
+  // MEMBER SINCE
+  // ==========================================================
 
   const memberSince = useMemo(() => {
     if (!user?.createdAt) {
@@ -111,9 +213,9 @@ function Profile() {
     });
   }, [user]);
 
-  /* =========================================================
-     PROFILE COMPLETION
-  ========================================================= */
+  // ==========================================================
+  // PROFILE COMPLETION
+  // ==========================================================
 
   const profileCompletion = useMemo(() => {
     if (!user) {
@@ -136,11 +238,11 @@ function Profile() {
     return Math.round((completed / fields.length) * 100);
   }, [user]);
 
-  /* =========================================================
-     ACTIVITY ITEMS
-  ========================================================= */
+  // ==========================================================
+  // STUDENT ACTIVITY
+  // ==========================================================
 
-  const actionItems = [
+  const studentActionItems = [
     {
       title: "Marketplace",
       description: "Discover products across your campus.",
@@ -203,15 +305,54 @@ function Profile() {
     },
   ];
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
+  // ==========================================================
+  // ADMIN ACTIVITY
+  // ==========================================================
+
+  const adminActionItems = [
+    {
+      title: "Admin Dashboard",
+      description: "Monitor CampusMart platform activity.",
+      icon: ShieldCheck,
+      to: "/admin/dashboard",
+    },
+    {
+      title: "Manage Products",
+      description: "Review, activate and remove listings.",
+      icon: Package,
+      to: "/admin/products",
+    },
+    {
+      title: "Manage Users",
+      description: "Review student accounts and verification.",
+      icon: User,
+      to: "/admin/users",
+    },
+    {
+      title: "Reports & Safety",
+      description: "Review marketplace reports and safety cases.",
+      icon: ShieldCheck,
+      to: "/admin/reports",
+    },
+    {
+      title: "Orders",
+      description: "Monitor marketplace orders and payments.",
+      icon: ShoppingBag,
+      to: "/admin/orders",
+    },
+  ];
+
+  const actionItems = isAdminProfile ? adminActionItems : studentActionItems;
+
+  // ==========================================================
+  // LOADING
+  // ==========================================================
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f9fc] dark:bg-[#070d18]">
         <div className="flex min-h-screen items-center justify-center px-4">
-          <div className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-[0_20px_70px_-35px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_20px_70px_-35px_rgba(0,0,0,0.6)]">
+          <div className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-[0_20px_70px_-35px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600">
               <Loader2 size={23} className="animate-spin text-white" />
             </div>
@@ -244,18 +385,19 @@ function Profile() {
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex h-[70px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link
-            to="/"
+            to={isAdminProfile ? "/admin/dashboard" : "/"}
             className="group inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition group-hover:bg-blue-50 dark:bg-slate-800 dark:group-hover:bg-blue-500/10">
               <ArrowRight size={16} className="rotate-180" />
             </span>
-            Back to Home
+
+            {isAdminProfile ? "Back to Admin Dashboard" : "Back to Home"}
           </Link>
 
           <div className="flex items-center gap-2">
             <Link
-              to="/profile/edit"
+              to={editProfilePath}
               className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-400 sm:inline-flex"
             >
               <Edit3 size={16} />
@@ -282,7 +424,7 @@ function Profile() {
 
         <div className="mb-7">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">
-            Account Center
+            {isAdminProfile ? "Administrator Account Center" : "Account Center"}
           </p>
 
           <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -292,8 +434,10 @@ function Profile() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Manage your student identity, marketplace activity, exchanges,
-                rentals and account settings from one place.
+                {isAdminProfile ?
+                  "Manage your administrator profile and CampusMart platform tools from one place."
+                : "Manage your student identity, marketplace activity, exchanges, rentals and account settings from one place."
+                }
               </p>
             </div>
 
@@ -305,12 +449,10 @@ function Profile() {
         </div>
 
         {/* ==================================================
-            PREMIUM HERO
+            HERO
         ================================================== */}
 
-        <section className="relative overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_30px_100px_-45px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-950 dark:shadow-[0_30px_100px_-45px_rgba(0,0,0,0.65)]">
-          {/* BACKGROUND GLOW */}
-
+        <section className="relative overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_30px_100px_-45px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-950">
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute -left-20 -top-32 h-[330px] w-[330px] rounded-full bg-blue-100 blur-3xl dark:bg-blue-500/15" />
 
@@ -321,21 +463,23 @@ function Profile() {
 
           <div className="relative p-6 sm:p-8 lg:p-10">
             <div className="flex flex-col gap-8">
-              {/* META */}
-
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200">
                   <Sparkles
                     size={14}
                     className="text-blue-600 dark:text-blue-300"
                   />
-                  CampusMart AI Member
+
+                  {isAdminProfile ?
+                    "CampusMart Administrator"
+                  : "CampusMart AI Member"}
                 </div>
 
                 {user.isVerified ?
                   <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-300">
                     <BadgeCheck size={14} />
-                    Verified Student
+
+                    {isAdminProfile ? "Verified Admin" : "Verified Student"}
                   </div>
                 : <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-300">
                     <ShieldCheck size={14} />
@@ -344,12 +488,8 @@ function Profile() {
                 }
               </div>
 
-              {/* USER */}
-
               <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_330px] xl:items-end">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-                  {/* AVATAR */}
-
                   <div className="relative w-fit shrink-0">
                     <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[30px] border-[5px] border-white bg-gradient-to-br from-blue-50 to-indigo-50 shadow-xl dark:border-slate-800 dark:from-slate-800 dark:to-slate-700 sm:h-32 sm:w-32">
                       {user.profileImage ?
@@ -375,15 +515,13 @@ function Profile() {
                     </div>
                   </div>
 
-                  {/* USER INFO */}
-
                   <div className="min-w-0">
                     <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
                       {user.name}
                     </h2>
 
                     <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-                      {user.role === "admin" ?
+                      {isAdminProfile ?
                         "CampusMart Administrator"
                       : "Student Member"}
                     </p>
@@ -391,6 +529,7 @@ function Profile() {
                     <div className="mt-4 flex flex-wrap gap-2">
                       <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                         <Mail size={13} />
+
                         <span className="truncate">{user.email}</span>
                       </div>
 
@@ -404,8 +543,6 @@ function Profile() {
                     </div>
                   </div>
                 </div>
-
-                {/* PROFILE STRENGTH */}
 
                 <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
                   <div className="flex items-center justify-between gap-4">
@@ -439,7 +576,7 @@ function Profile() {
                     </span>
 
                     <Link
-                      to="/profile/edit"
+                      to={editProfilePath}
                       className="font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       Complete
@@ -450,12 +587,10 @@ function Profile() {
             </div>
           </div>
 
-          {/* INFO STRIP */}
-
           <div className="grid border-t border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-white/[0.03] md:grid-cols-3">
             <div className="border-b border-slate-200 px-6 py-5 dark:border-slate-800 md:border-b-0 md:border-r">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                Student ID
+                {isAdminProfile ? "Admin ID" : "Student ID"}
               </p>
 
               <p className="mt-2 truncate text-sm font-bold text-slate-900 dark:text-white">
@@ -491,18 +626,16 @@ function Profile() {
         </section>
 
         {/* ==================================================
-            MAIN GRID
+            MAIN
         ================================================== */}
 
         <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-          {/* =================================================
-              LEFT
-          ================================================= */}
-
           <div className="space-y-8">
-            {/* PERSONAL INFORMATION */}
+            {/* ==================================================
+                PERSONAL INFO
+            ================================================== */}
 
-            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_18px_60px_-40px_rgba(0,0,0,0.6)] sm:p-8">
+            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900 sm:p-8">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
@@ -514,12 +647,14 @@ function Profile() {
                   </h3>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                    Your student account information.
+                    {isAdminProfile ?
+                      "Your administrator account information."
+                    : "Your student account information."}
                   </p>
                 </div>
 
                 <Link
-                  to="/profile/edit"
+                  to={editProfilePath}
                   className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
                 >
                   <Edit3 size={16} />
@@ -544,7 +679,7 @@ function Profile() {
 
                 <ProfileRow
                   icon={BadgeCheck}
-                  label="Student ID"
+                  label={isAdminProfile ? "Admin ID" : "Student ID"}
                   value={user.studentId || "Not added"}
                   accent="emerald"
                 />
@@ -572,27 +707,31 @@ function Profile() {
               </div>
             </section>
 
-            {/* ACTIVITY */}
+            {/* ==================================================
+                ACTIVITY
+            ================================================== */}
 
             <section>
               <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
-                    Marketplace
+                    {isAdminProfile ? "Administration" : "Marketplace"}
                   </p>
 
                   <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-                    Your Activity
+                    {isAdminProfile ? "Admin Tools" : "Your Activity"}
                   </h3>
 
                   <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-                    Manage buying, selling, exchanging and renting from one
-                    place.
+                    {isAdminProfile ?
+                      "Access the main CampusMart administration modules."
+                    : "Manage buying, selling, exchanging and renting from one place."
+                    }
                   </p>
                 </div>
 
                 <Link
-                  to="/marketplace"
+                  to={isAdminProfile ? "/admin/dashboard" : "/marketplace"}
                   className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                 >
                   Explore
@@ -608,7 +747,7 @@ function Profile() {
                     <Link
                       key={item.title}
                       to={item.to}
-                      className="group relative overflow-hidden rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_12px_45px_-34px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_22px_55px_-32px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_12px_45px_-34px_rgba(0,0,0,0.55)] dark:hover:border-blue-700"
+                      className="group relative overflow-hidden rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_12px_45px_-34px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-1 hover:border-blue-200 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
                     >
                       <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-blue-50 blur-2xl opacity-0 transition group-hover:opacity-100 dark:bg-blue-500/10" />
 
@@ -639,14 +778,12 @@ function Profile() {
             </section>
           </div>
 
-          {/* =================================================
-              RIGHT
-          ================================================= */}
+          {/* ==================================================
+              RIGHT COLUMN
+          ================================================== */}
 
           <aside className="space-y-6">
-            {/* ACCOUNT OVERVIEW */}
-
-            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_18px_60px_-40px_rgba(0,0,0,0.6)]">
+            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
                 Trust & Security
               </p>
@@ -660,15 +797,31 @@ function Profile() {
                   icon={CheckCircle2}
                   title="Account Status"
                   description="Your account is active"
-                  status="Active"
-                  statusClass="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                  iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  status={user.isActive === false ? "Inactive" : "Active"}
+                  statusClass={
+                    user.isActive === false ?
+                      "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
+                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                  }
+                  iconClass={
+                    user.isActive === false ?
+                      "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                    : "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  }
                 />
 
                 <StatusCard
                   icon={BadgeCheck}
-                  title="Student Verification"
-                  description="Campus identity verification"
+                  title={
+                    isAdminProfile ?
+                      "Administrator Verification"
+                    : "Student Verification"
+                  }
+                  description={
+                    isAdminProfile ?
+                      "Administrator account verification"
+                    : "Campus identity verification"
+                  }
                   status={user.isVerified ? "Verified" : "Pending"}
                   statusClass={
                     user.isVerified ?
@@ -693,12 +846,8 @@ function Profile() {
               </div>
             </section>
 
-            {/* SECURITY */}
-
-            <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_25px_70px_-35px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:shadow-[0_25px_70px_-35px_rgba(0,0,0,0.7)]">
+            <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
               <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-blue-100 blur-3xl dark:bg-blue-500/15" />
-
-              <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-indigo-100 blur-3xl dark:bg-indigo-500/10" />
 
               <div className="relative">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 dark:bg-white/[0.06]">
@@ -724,60 +873,50 @@ function Profile() {
               </div>
             </section>
 
-            {/* CAMPUS */}
-
             <section className="rounded-[30px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100 dark:bg-slate-800 dark:text-blue-400 dark:ring-slate-700">
                 <ShieldCheck size={21} />
               </div>
 
               <h3 className="mt-5 text-xl font-black text-slate-950 dark:text-white">
-                Built for campus communities
+                {isAdminProfile ?
+                  "CampusMart Administration"
+                : "Built for campus communities"}
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Verified student profiles help make buying, selling, exchanging
-                and renting safer inside your campus marketplace.
+                {isAdminProfile ?
+                  "Manage marketplace operations, users, products, reports and platform safety from the administrator account."
+                : "Verified student profiles help make buying, selling, exchanging and renting safer inside your campus marketplace."
+                }
               </p>
 
               <div className="mt-5 space-y-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2
-                    size={16}
-                    className="text-emerald-600 dark:text-emerald-400"
-                  />
-                  Student-focused marketplace
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <CheckCircle2
-                    size={16}
-                    className="text-emerald-600 dark:text-emerald-400"
-                  />
-                  Campus-first transactions
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <CheckCircle2
-                    size={16}
-                    className="text-emerald-600 dark:text-emerald-400"
-                  />
-                  AI-ready platform
-                </div>
+                {isAdminProfile ?
+                  <>
+                    <AdminBenefit text="Platform administration" />
+                    <AdminBenefit text="Marketplace safety controls" />
+                    <AdminBenefit text="Analytics-ready platform" />
+                  </>
+                : <>
+                    <AdminBenefit text="Student-focused marketplace" />
+                    <AdminBenefit text="Campus-first transactions" />
+                    <AdminBenefit text="AI-ready platform" />
+                  </>
+                }
               </div>
 
               <Link
-                to="/marketplace"
+                to={isAdminProfile ? "/admin/dashboard" : "/marketplace"}
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-500 dark:hover:text-white"
               >
-                Browse Marketplace
+                {isAdminProfile ? "Open Admin Dashboard" : "Browse Marketplace"}
+
                 <ArrowRight size={15} />
               </Link>
             </section>
 
-            {/* QUICK LINKS */}
-
-            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_18px_60px_-40px_rgba(0,0,0,0.6)]">
+            <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-40px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -796,37 +935,80 @@ function Profile() {
               </div>
 
               <div className="mt-5 space-y-2">
-                <QuickLink to="/sell" label="List a Product" icon={Package} />
+                {isAdminProfile ?
+                  <>
+                    <QuickLink
+                      to="/admin/dashboard"
+                      label="Admin Dashboard"
+                      icon={ShieldCheck}
+                    />
 
-                <QuickLink to="/cart" label="Open Cart" icon={ShoppingBag} />
+                    <QuickLink
+                      to="/admin/products"
+                      label="Manage Products"
+                      icon={Package}
+                    />
 
-                <QuickLink to="/wishlist" label="View Wishlist" icon={Heart} />
+                    <QuickLink
+                      to="/admin/users"
+                      label="Manage Users"
+                      icon={User}
+                    />
 
-                <QuickLink
-                  to="/chat"
-                  label="Open Messages"
-                  icon={MessageCircle}
-                />
+                    <QuickLink
+                      to="/admin/reports"
+                      label="Reports & Safety"
+                      icon={ShieldCheck}
+                    />
 
-                <QuickLink
-                  to="/my-rentals"
-                  label="My Rentals"
-                  icon={CalendarDays}
-                />
+                    <QuickLink
+                      to="/admin/orders"
+                      label="Manage Orders"
+                      icon={ShoppingBag}
+                    />
+                  </>
+                : <>
+                    <QuickLink
+                      to="/sell"
+                      label="List a Product"
+                      icon={Package}
+                    />
 
-                <QuickLink
-                  to="/rental-requests"
-                  label="Rental Requests"
-                  icon={CalendarDays}
-                />
+                    <QuickLink
+                      to="/cart"
+                      label="Open Cart"
+                      icon={ShoppingBag}
+                    />
+
+                    <QuickLink
+                      to="/wishlist"
+                      label="View Wishlist"
+                      icon={Heart}
+                    />
+
+                    <QuickLink
+                      to="/chat"
+                      label="Open Messages"
+                      icon={MessageCircle}
+                    />
+
+                    <QuickLink
+                      to="/my-rentals"
+                      label="My Rentals"
+                      icon={CalendarDays}
+                    />
+
+                    <QuickLink
+                      to="/rental-requests"
+                      label="Rental Requests"
+                      icon={CalendarDays}
+                    />
+                  </>
+                }
               </div>
             </section>
           </aside>
         </div>
-
-        {/* ==================================================
-            FOOTER
-        ================================================== */}
 
         <div className="mt-10 flex flex-col gap-2 border-t border-slate-200 pt-6 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>CampusMart AI · Student-to-Student Marketplace</p>
@@ -848,13 +1030,18 @@ function Profile() {
 function ProfileRow({ icon: Icon, label, value, accent }) {
   const accentMap = {
     blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
+
     violet:
       "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400",
+
     emerald:
       "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+
     indigo:
       "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
+
     rose: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400",
+
     amber:
       "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
   };
@@ -915,6 +1102,23 @@ function StatusCard({
       >
         {status}
       </span>
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN / BENEFIT ITEM
+========================================================= */
+
+function AdminBenefit({ text }) {
+  return (
+    <div className="flex items-center gap-2">
+      <CheckCircle2
+        size={16}
+        className="text-emerald-600 dark:text-emerald-400"
+      />
+
+      {text}
     </div>
   );
 }

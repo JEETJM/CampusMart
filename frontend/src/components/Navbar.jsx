@@ -31,12 +31,15 @@ function Navbar() {
   const location = useLocation();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const [searchValue, setSearchValue] = useState("");
 
   const [notifications, setNotifications] = useState([]);
+
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const [theme, setTheme] = useState(() => {
@@ -91,6 +94,7 @@ function Navbar() {
     const root = document.documentElement;
 
     root.classList.remove("light", "dark");
+
     root.classList.add(theme);
 
     localStorage.setItem("campusmart_theme", theme);
@@ -187,7 +191,6 @@ function Navbar() {
     if (!isLoggedIn) {
       setNotifications([]);
       setUnreadNotifications(0);
-
       return;
     }
 
@@ -203,7 +206,7 @@ function Navbar() {
   }, [isLoggedIn, isAdmin, adminToken, studentToken]);
 
   /* =========================================================
-     MARK SINGLE NOTIFICATION AS READ
+     MARK SINGLE NOTIFICATION
   ========================================================= */
 
   const handleNotificationClick = async (notification) => {
@@ -281,25 +284,13 @@ function Navbar() {
   ========================================================= */
 
   const handleLogout = () => {
-    /* -------------------------------------------------------
-       REMOVE STUDENT SESSION
-    ------------------------------------------------------- */
-
     localStorage.removeItem("campusmart_token");
 
     localStorage.removeItem("campusmart_user");
 
-    /* -------------------------------------------------------
-       REMOVE ADMIN SESSION
-    ------------------------------------------------------- */
-
     localStorage.removeItem("campusmart_admin_token");
 
     localStorage.removeItem("campusmart_admin_user");
-
-    /* -------------------------------------------------------
-       RESET UI
-    ------------------------------------------------------- */
 
     setNotifications([]);
     setUnreadNotifications(0);
@@ -314,7 +305,7 @@ function Navbar() {
   };
 
   /* =========================================================
-     NAV CLASSES
+     CLASSES
   ========================================================= */
 
   const navLinkClass = ({ isActive }) =>
@@ -339,9 +330,9 @@ function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-        {/* =====================================================
+        {/* ===================================================
             MAIN BAR
-        ===================================================== */}
+        =================================================== */}
 
         <div className="flex min-h-[76px] items-center gap-4 lg:gap-6">
           {/* BRAND */}
@@ -358,9 +349,9 @@ function Navbar() {
             />
           </Link>
 
-          {/* ===================================================
+          {/* =================================================
               DESKTOP NAV
-          =================================================== */}
+          ================================================== */}
 
           <nav className="hidden shrink-0 items-center gap-5 xl:flex">
             <NavLink to="/" className={navLinkClass}>
@@ -372,13 +363,17 @@ function Navbar() {
             </NavLink>
 
             {/* =================================================
-                ADMIN NAV
+                ADMIN
             ================================================= */}
 
             {isAdmin ?
               <>
                 <NavLink to="/admin/dashboard" className={navLinkClass}>
                   Admin Dashboard
+                </NavLink>
+
+                <NavLink to="/admin/products" className={navLinkClass}>
+                  Products
                 </NavLink>
 
                 <NavLink to="/admin/users" className={navLinkClass}>
@@ -415,9 +410,9 @@ function Navbar() {
             }
           </nav>
 
-          {/* ===================================================
+          {/* =================================================
               DESKTOP SEARCH
-          =================================================== */}
+          ================================================== */}
 
           <form
             onSubmit={handleSearch}
@@ -434,7 +429,7 @@ function Navbar() {
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Search books, electronics, cycles, notes..."
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-12 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-blue-500 dark:focus:bg-slate-900 dark:focus:ring-blue-500/10"
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-12 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-blue-500 dark:focus:bg-slate-900"
               />
 
               {searchValue && (
@@ -449,9 +444,9 @@ function Navbar() {
             </div>
           </form>
 
-          {/* ===================================================
-              RIGHT SIDE
-          =================================================== */}
+          {/* =================================================
+              RIGHT
+          ================================================== */}
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             {/* MOBILE SEARCH */}
@@ -484,7 +479,7 @@ function Navbar() {
 
             {/* =================================================
                 LOGGED IN
-            ================================================= */}
+            ================================================== */}
 
             {isLoggedIn && (
               <>
@@ -652,7 +647,7 @@ function Navbar() {
 
             {/* =================================================
                 LOGGED OUT
-            ================================================= */}
+            ================================================== */}
 
             {!isLoggedIn && (
               <div className="ml-1 hidden items-center gap-2 sm:flex">
@@ -684,7 +679,7 @@ function Navbar() {
 
             {/* =================================================
                 PROFILE
-            ================================================= */}
+            ================================================== */}
 
             {isLoggedIn && (
               <div ref={profileRef} className="relative ml-1 hidden sm:block">
@@ -727,8 +722,6 @@ function Navbar() {
 
                 {isProfileOpen && (
                   <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-                    {/* PROFILE */}
-
                     <div className="mb-2 rounded-xl bg-blue-50 p-3 dark:bg-blue-500/10">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-blue-600 font-bold text-white">
@@ -754,9 +747,12 @@ function Navbar() {
                     </div>
 
                     {/* COMMON */}
+                    {/* =================================================
+    MY PROFILE
+================================================= */}
 
                     <ProfileMenuLink
-                      to="/profile"
+                      to={isAdmin ? "/admin/profile" : "/profile"}
                       icon={User}
                       label="My Profile"
                       onClick={() => setIsProfileOpen(false)}
@@ -838,6 +834,13 @@ function Navbar() {
                         />
 
                         <ProfileMenuLink
+                          to="/admin/products"
+                          icon={Package}
+                          label="Products"
+                          onClick={() => setIsProfileOpen(false)}
+                        />
+
+                        <ProfileMenuLink
                           to="/admin/users"
                           icon={Users}
                           label="User Management"
@@ -850,10 +853,15 @@ function Navbar() {
                           label="Reports & Safety"
                           onClick={() => setIsProfileOpen(false)}
                         />
+
+                        <ProfileMenuLink
+                          to="/notifications"
+                          icon={Bell}
+                          label="Notifications"
+                          onClick={() => setIsProfileOpen(false)}
+                        />
                       </>
                     )}
-
-                    {/* LOGOUT */}
 
                     <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
 
@@ -870,7 +878,7 @@ function Navbar() {
               </div>
             )}
 
-            {/* MOBILE */}
+            {/* MOBILE MENU BUTTON */}
 
             <button
               type="button"
@@ -902,7 +910,7 @@ function Navbar() {
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Search books, electronics, cycles..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
               />
 
               {searchValue && (
@@ -938,8 +946,6 @@ function Navbar() {
               : <Moon size={18} />}
             </button>
 
-            {/* LINKS */}
-
             <nav className="grid gap-1">
               <NavLink to="/" className={mobileLinkClass}>
                 Home
@@ -949,13 +955,20 @@ function Navbar() {
                 Marketplace
               </NavLink>
 
-              {/* ADMIN MOBILE */}
+              {/* =================================================
+                  ADMIN MOBILE
+              ================================================== */}
 
               {isAdmin ?
                 <>
                   <NavLink to="/admin/dashboard" className={mobileLinkClass}>
                     <LayoutDashboard size={16} className="mr-3" />
                     Admin Dashboard
+                  </NavLink>
+
+                  <NavLink to="/admin/products" className={mobileLinkClass}>
+                    <Package size={16} className="mr-3" />
+                    Products
                   </NavLink>
 
                   <NavLink to="/admin/users" className={mobileLinkClass}>
@@ -971,6 +984,11 @@ function Navbar() {
                   <NavLink to="/notifications" className={mobileLinkClass}>
                     <Bell size={16} className="mr-3" />
                     Notifications
+                    {unreadNotifications > 0 && (
+                      <span className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                        {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                      </span>
+                    )}
                   </NavLink>
 
                   <NavLink to="/profile" className={mobileLinkClass}>
@@ -988,8 +1006,6 @@ function Navbar() {
                   </button>
                 </>
               : <>
-                  {/* STUDENT / PUBLIC */}
-
                   <NavLink to="/sell" className={mobileLinkClass}>
                     Sell Product
                   </NavLink>

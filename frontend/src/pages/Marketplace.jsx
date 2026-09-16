@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import {
@@ -13,6 +13,11 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
+  BadgeCheck,
+  RefreshCw,
+  ArrowUpDown,
+  Store,
 } from "lucide-react";
 
 import api from "../services/api";
@@ -62,7 +67,31 @@ const sortOptions = [
 ];
 
 const fallbackImage =
-  "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80";
+  "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=1000&q=85";
+
+// =====================================================
+// HELPER
+// =====================================================
+
+const getProductImage = (product) => {
+  if (
+    Array.isArray(product?.images) &&
+    product.images.length > 0 &&
+    product.images[0]
+  ) {
+    return product.images[0];
+  }
+
+  return fallbackImage;
+};
+
+const getSellerInitial = (sellerName) => {
+  if (!sellerName) {
+    return "S";
+  }
+
+  return sellerName.charAt(0).toUpperCase();
+};
 
 // =====================================================
 // COMPONENT
@@ -70,13 +99,13 @@ const fallbackImage =
 
 function Marketplace() {
   // ===================================================
-  // URL SEARCH PARAMS
+  // URL
   // ===================================================
 
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ===================================================
-  // PRODUCT STATE
+  // PRODUCTS
   // ===================================================
 
   const [products, setProducts] = useState([]);
@@ -86,7 +115,7 @@ function Marketplace() {
   const [error, setError] = useState("");
 
   // ===================================================
-  // FILTER STATE
+  // FILTERS
   // ===================================================
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
@@ -112,7 +141,7 @@ function Marketplace() {
   const [showFilters, setShowFilters] = useState(false);
 
   // ===================================================
-  // WISHLIST
+  // WISHLIST - TEMP LOCAL UI
   // ===================================================
 
   const [wishlist, setWishlist] = useState([]);
@@ -127,13 +156,29 @@ function Marketplace() {
     totalProducts: 0,
     totalPages: 0,
     currentPage: 1,
-    productsPerPage: 12,
-    hasNextPage: false,
-    hasPreviousPage: false,
+    limit: 12,
   });
 
   // ===================================================
-  // SYNC URL -> STATE
+  // ACTIVE FILTERS
+  // ===================================================
+
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        search.trim() ||
+        category !== "All" ||
+        condition !== "All" ||
+        listingType !== "All" ||
+        minPrice !== "" ||
+        maxPrice !== "" ||
+        sort !== "newest",
+      ),
+    [search, category, condition, listingType, minPrice, maxPrice, sort],
+  );
+
+  // ===================================================
+  // URL -> STATE
   // ===================================================
 
   useEffect(() => {
@@ -163,13 +208,14 @@ function Marketplace() {
 
     setMinPrice(urlMinPrice);
     setMaxPrice(urlMaxPrice);
-    setSort(urlSort);
 
-    setPage(1);
+    setSort(
+      sortOptions.some((item) => item.value === urlSort) ? urlSort : "newest",
+    );
   }, [searchParams]);
 
   // ===================================================
-  // UPDATE URL WHEN FILTERS CHANGE
+  // STATE -> URL
   // ===================================================
 
   useEffect(() => {
@@ -211,6 +257,8 @@ function Marketplace() {
       setSearchParams(nextParams, {
         replace: true,
       });
+
+      setPage(1);
     }
   }, [
     search,
@@ -229,6 +277,8 @@ function Marketplace() {
   // ===================================================
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProducts = async () => {
       try {
         setLoading(true);
@@ -268,31 +318,48 @@ function Marketplace() {
           params,
         });
 
-        setProducts(response.data?.products || []);
+        if (cancelled) {
+          return;
+        }
+
+        setProducts(
+          Array.isArray(response.data?.products) ? response.data.products : [],
+        );
 
         setPagination(
           response.data?.pagination || {
             totalProducts: 0,
             totalPages: 0,
             currentPage: 1,
-            productsPerPage: 12,
-            hasNextPage: false,
-            hasPreviousPage: false,
+            limit: 12,
           },
         );
-      } catch (error) {
-        console.error("Marketplace Error:", error);
+      } catch (fetchError) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Marketplace Error:", fetchError);
+
+        setProducts([]);
 
         setError(
-          error.response?.data?.message ||
+          fetchError.response?.data?.message ||
+            fetchError.message ||
             "Unable to load products. Please try again.",
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     page,
     search,
@@ -332,40 +399,51 @@ function Marketplace() {
   };
 
   // ===================================================
-  // ACTIVE FILTER CHECK
-  // ===================================================
-
-  const hasActiveFilters =
-    search.trim() ||
-    category !== "All" ||
-    condition !== "All" ||
-    listingType !== "All" ||
-    minPrice !== "" ||
-    maxPrice !== "" ||
-    sort !== "newest";
-
-  // ===================================================
-  // PAGINATION NUMBERS
+  // PAGE NUMBERS
   // ===================================================
 
   const getPageNumbers = () => {
-    const totalPages = pagination.totalPages;
+    const totalPages = pagination.totalPages || 0;
 
-    if (!totalPages) {
+    if (totalPages <= 0) {
       return [];
     }
-
-    const pages = [];
 
     const start = Math.max(1, page - 2);
 
     const end = Math.min(totalPages, page + 2);
 
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
+    const numbers = [];
+
+    for (let current = start; current <= end; current += 1) {
+      numbers.push(current);
     }
 
-    return pages;
+    return numbers;
+  };
+
+  const hasPreviousPage = page > 1;
+
+  const hasNextPage = page < (pagination.totalPages || 0);
+
+  // ===================================================
+  // LISTING TYPE LABEL
+  // ===================================================
+
+  const getListingLabel = (listing) => {
+    if (listing === "Sell") {
+      return "For Sale";
+    }
+
+    if (listing === "Rent") {
+      return "For Rent";
+    }
+
+    if (listing === "Exchange") {
+      return "Exchange";
+    }
+
+    return listing || "Listing";
   };
 
   // ===================================================
@@ -373,87 +451,184 @@ function Marketplace() {
   // ===================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f7faff] text-slate-900 dark:bg-[#070b14] dark:text-slate-100">
       {/* =================================================
           HERO
-      ================================================= */}
+      ================================================== */}
 
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
-              <ShieldCheck size={16} />
-              Verified Campus Marketplace
+      <section className="relative overflow-hidden border-b border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-950">
+        {/* Glows */}
+        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-600/10" />
+
+        <div className="pointer-events-none absolute -right-24 top-10 h-80 w-80 rounded-full bg-indigo-200/30 blur-3xl dark:bg-indigo-500/10" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
+          {/* Header */}
+          <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-blue-700 dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300">
+                <ShieldCheck size={14} />
+                Verified Campus Marketplace
+              </div>
+
+              <h1 className="text-4xl font-black tracking-[-0.045em] text-slate-950 dark:text-white sm:text-5xl lg:text-6xl">
+                Find what you need.
+                <span className="block text-blue-600 dark:text-blue-400">
+                  Sell what you don't.
+                </span>
+              </h1>
+
+              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-400 sm:text-lg">
+                Buy, sell, rent and exchange products with students from your
+                campus community.
+              </p>
             </div>
 
-            <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-              Find what you need.
-              <span className="block text-blue-600">Sell what you don't.</span>
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-              Buy, sell, rent and exchange products with students from your
-              campus community.
-            </p>
-          </div>
-
-          {/* SEARCH */}
-
-          <div className="mt-8 flex max-w-5xl items-center rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
-            <Search size={21} className="ml-3 shrink-0 text-slate-400" />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search books, electronics, cycles..."
-              className="w-full bg-transparent px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowFilters((previous) => !previous)}
-              className="flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
-            >
-              <SlidersHorizontal size={18} />
-              Filters
-            </button>
-          </div>
-
-          {/* =================================================
-              ACTIVE CATEGORY
-          ================================================= */}
-
-          {category !== "All" && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-sm text-slate-500">Showing:</span>
-
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
-                {category}
-
-                <button
-                  type="button"
-                  onClick={() => setCategory("All")}
-                  className="rounded-full hover:bg-blue-100"
-                  aria-label="Remove category filter"
-                >
-                  <X size={14} />
-                </button>
-              </span>
-            </div>
-          )}
-
-          {/* =================================================
-              FILTER PANEL
-          ================================================= */}
-
-          {showFilters && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {/* CATEGORY */}
+            <div className="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:block dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                  <Sparkles size={19} />
+                </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400">
+                    CampusMart AI
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">
+                    Shop smarter
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEARCH BAR */}
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_55px_rgba(37,99,235,0.09)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-slate-50 px-4 dark:bg-slate-800">
+                <Search
+                  size={20}
+                  className="shrink-0 text-slate-400 dark:text-slate-500"
+                />
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search books, electronics, cycles..."
+                  className="min-w-0 flex-1 bg-transparent py-4 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                    aria-label="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowFilters((previous) => !previous)}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold transition ${
+                  showFilters || hasActiveFilters ?
+                    "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:bg-blue-500 dark:shadow-blue-950/30"
+                  : "border border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                }`}
+              >
+                <SlidersHorizontal size={18} />
+                Filters
+                {hasActiveFilters && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-black text-blue-600">
+                    Active
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* ACTIVE FILTERS */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {category !== "All" && (
+              <button
+                type="button"
+                onClick={() => setCategory("All")}
+                className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300"
+              >
+                {category}
+                <X size={13} />
+              </button>
+            )}
+
+            {condition !== "All" && (
+              <button
+                type="button"
+                onClick={() => setCondition("All")}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              >
+                {condition}
+                <X size={13} />
+              </button>
+            )}
+
+            {listingType !== "All" && (
+              <button
+                type="button"
+                onClick={() => setListingType("All")}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              >
+                {getListingLabel(listingType)}
+                <X size={13} />
+              </button>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-500/10"
+              >
+                <X size={13} />
+                Clear all
+              </button>
+            )}
+          </div>
+
+          {/* FILTER PANEL */}
+          {showFilters && (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+              <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">
+                      Refine your search
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Choose the options that match your needs.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    aria-label="Close filters"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-5 p-5 md:grid-cols-2 lg:grid-cols-3">
+                {/* CATEGORY */}
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Category
                   </label>
 
@@ -461,7 +636,7 @@ function Marketplace() {
                     <select
                       value={category}
                       onChange={(event) => setCategory(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
                       {categories.map((item) => (
                         <option key={item} value={item}>
@@ -471,16 +646,15 @@ function Marketplace() {
                     </select>
 
                     <ChevronDown
-                      size={18}
+                      size={17}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                   </div>
                 </div>
 
                 {/* CONDITION */}
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Condition
                   </label>
 
@@ -488,7 +662,7 @@ function Marketplace() {
                     <select
                       value={condition}
                       onChange={(event) => setCondition(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
                       {conditions.map((item) => (
                         <option key={item} value={item}>
@@ -498,16 +672,15 @@ function Marketplace() {
                     </select>
 
                     <ChevronDown
-                      size={18}
+                      size={17}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                   </div>
                 </div>
 
                 {/* LISTING TYPE */}
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Listing Type
                   </label>
 
@@ -515,60 +688,73 @@ function Marketplace() {
                     <select
                       value={listingType}
                       onChange={(event) => setListingType(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
                       {listingTypes.map((item) => (
                         <option key={item} value={item}>
-                          {item}
+                          {item === "Sell" ?
+                            "For Sale"
+                          : item === "Rent" ?
+                            "For Rent"
+                          : item}
                         </option>
                       ))}
                     </select>
 
                     <ChevronDown
-                      size={18}
+                      size={17}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                   </div>
                 </div>
 
                 {/* MIN PRICE */}
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Minimum Price
                   </label>
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={minPrice}
-                    onChange={(event) => setMinPrice(event.target.value)}
-                    placeholder="₹ Minimum"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  />
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                      ₹
+                    </span>
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={minPrice}
+                      onChange={(event) => setMinPrice(event.target.value)}
+                      placeholder="Minimum"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-9 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    />
+                  </div>
                 </div>
 
                 {/* MAX PRICE */}
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Maximum Price
                   </label>
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={maxPrice}
-                    onChange={(event) => setMaxPrice(event.target.value)}
-                    placeholder="₹ Maximum"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  />
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                      ₹
+                    </span>
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={maxPrice}
+                      onChange={(event) => setMaxPrice(event.target.value)}
+                      placeholder="Maximum"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-9 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    />
+                  </div>
                 </div>
 
                 {/* SORT */}
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Sort By
                   </label>
 
@@ -576,7 +762,7 @@ function Marketplace() {
                     <select
                       value={sort}
                       onChange={(event) => setSort(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm outline-none focus:border-blue-500"
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                     >
                       {sortOptions.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -585,24 +771,23 @@ function Marketplace() {
                       ))}
                     </select>
 
-                    <ChevronDown
-                      size={18}
+                    <ArrowUpDown
+                      size={16}
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                   </div>
                 </div>
               </div>
 
-              {hasActiveFilters && (
+              <div className="flex justify-end border-t border-slate-100 px-5 py-4 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-5 flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
+                  className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-600 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-500 dark:hover:text-white"
                 >
-                  <X size={16} />
-                  Clear all filters
+                  Reset Filters
                 </button>
-              )}
+              </div>
             </div>
           )}
         </div>
@@ -610,74 +795,102 @@ function Marketplace() {
 
       {/* =================================================
           MAIN
-      ================================================= */}
+      ================================================== */}
 
-      <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-        {/* HEADER */}
-
-        <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        {/* RESULTS HEADER */}
+        <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h2 className="text-2xl font-bold text-slate-950">Marketplace</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                <Store size={18} />
+              </div>
 
-            <p className="mt-1 text-sm text-slate-500">
-              {loading ?
-                "Loading products..."
-              : `${pagination.totalProducts} product${
-                  pagination.totalProducts !== 1 ? "s" : ""
-                } available`
-              }
-            </p>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                  Marketplace
+                </h2>
+
+                <p className="mt-0.5 text-xs font-medium text-slate-400">
+                  {loading ?
+                    "Finding products for you..."
+                  : `${pagination.totalProducts || 0} product${
+                      pagination.totalProducts !== 1 ? "s" : ""
+                    } available`
+                  }
+                </p>
+              </div>
+            </div>
           </div>
 
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="flex items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 sm:self-auto"
-            >
-              <X size={16} />
-              Clear filters
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 sm:inline-flex dark:bg-blue-500/10 dark:text-blue-400">
+                Filters applied
+              </span>
+            )}
+
+            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+              <ArrowUpDown size={14} />
+              {sortOptions.find((item) => item.value === sort)?.label ||
+                "Newest First"}
+            </div>
+          </div>
         </div>
 
         {/* ERROR */}
-
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
-            <p className="font-semibold">Unable to load marketplace</p>
+          <div className="mb-7 rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-500/20 dark:bg-red-500/5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="font-bold text-red-700 dark:text-red-400">
+                  Unable to load marketplace
+                </p>
 
-            <p className="mt-1 text-sm">{error}</p>
+                <p className="mt-1 text-sm text-red-600/80 dark:text-red-400/80">
+                  {error}
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setPage(1)}
-              className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              Try Again
-            </button>
+              <button
+                type="button"
+                onClick={() => setPage(1)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+              >
+                <RefreshCw size={15} />
+                Try Again
+              </button>
+            </div>
           </div>
         )}
 
         {/* LOADING */}
-
         {loading && !error && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({
+              length: 8,
+            }).map((_, index) => (
               <div
-                key={item}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                key={index}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="h-56 animate-pulse bg-slate-200" />
+                <div className="h-60 animate-pulse bg-slate-200 dark:bg-slate-800" />
 
-                <div className="space-y-3 p-5">
-                  <div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
+                <div className="space-y-4 p-5">
+                  <div className="flex justify-between gap-3">
+                    <div className="h-3 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+                  </div>
 
-                  <div className="h-5 w-full animate-pulse rounded bg-slate-200" />
+                  <div className="h-5 w-4/5 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
-                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+                  <div className="h-4 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
 
-                  <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
+                  <div className="h-7 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+
+                  <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -685,92 +898,114 @@ function Marketplace() {
         )}
 
         {/* PRODUCTS */}
-
         {!loading && !error && products.length > 0 && (
           <>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((product) => {
-                const isWishlisted = wishlist.includes(product._id);
+                const productId = product._id;
 
-                const image = product.images?.[0] || fallbackImage;
+                const isWishlisted = wishlist.includes(productId);
+
+                const image = getProductImage(product);
+
+                const sellerName = product.seller?.name || "Campus Seller";
 
                 return (
                   <article
-                    key={product._id}
-                    className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                    key={productId}
+                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-[0_24px_60px_rgba(37,99,235,0.12)] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800 dark:hover:shadow-black/30"
                   >
                     {/* IMAGE */}
+                    <div className="relative h-60 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                      <Link
+                        to={`/product/${productId}`}
+                        className="block h-full w-full"
+                      >
+                        <img
+                          src={image}
+                          alt={product.title}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                          onError={(event) => {
+                            if (event.currentTarget.src !== fallbackImage) {
+                              event.currentTarget.src = fallbackImage;
+                            }
+                          }}
+                        />
+                      </Link>
 
-                    <div className="relative h-56 overflow-hidden bg-slate-100">
-                      <img
-                        src={image}
-                        alt={product.title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                        onError={(event) => {
-                          event.currentTarget.src = fallbackImage;
-                        }}
-                      />
+                      {/* Image gradient */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
 
-                      {/* LISTING TYPE */}
+                      {/* Listing badge */}
+                      <span className="absolute left-3 top-3 rounded-full border border-white/30 bg-emerald-500 px-3 py-1.5 text-[10px] font-black text-white shadow-lg">
+                        {getListingLabel(product.listingType)}
+                      </span>
 
-                      <div className="absolute left-3 top-3 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                        {product.listingType}
-                      </div>
-
-                      {/* WISHLIST */}
-
+                      {/* Wishlist */}
                       <button
                         type="button"
-                        onClick={() => toggleWishlist(product._id)}
-                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105"
-                        aria-label="Add to wishlist"
+                        onClick={() => toggleWishlist(productId)}
+                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/90 text-slate-600 shadow-lg backdrop-blur transition hover:scale-105 hover:text-red-500 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300"
+                        aria-label={
+                          isWishlisted ?
+                            "Remove from wishlist"
+                          : "Add to wishlist"
+                        }
                       >
                         <Heart
-                          size={18}
+                          size={17}
                           className={
-                            isWishlisted ?
-                              "fill-red-500 text-red-500"
-                            : "text-slate-700"
+                            isWishlisted ? "fill-red-500 text-red-500" : ""
                           }
                         />
                       </button>
+
+                      {/* Verified */}
+                      {product.seller?.isVerified && (
+                        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-md backdrop-blur dark:bg-slate-900/90 dark:text-slate-200">
+                          <BadgeCheck size={12} className="text-blue-500" />
+                          Verified seller
+                        </div>
+                      )}
                     </div>
 
                     {/* CONTENT */}
-
-                    <div className="p-5">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">
                           {product.category}
                         </span>
 
-                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          {product.condition}
-                        </span>
+                        {product.condition && (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {product.condition}
+                          </span>
+                        )}
                       </div>
 
-                      <Link to={`/product/${product._id}`} className="block">
-                        <h3 className="line-clamp-2 min-h-[48px] text-lg font-bold text-slate-950 transition hover:text-blue-600">
+                      <Link to={`/product/${productId}`} className="mt-2 block">
+                        <h3 className="line-clamp-2 min-h-[48px] text-base font-black leading-6 text-slate-900 transition hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
                           {product.title}
                         </h3>
                       </Link>
 
-                      <p className="mt-2 line-clamp-2 min-h-[40px] text-sm leading-5 text-slate-500">
-                        {product.description}
+                      <p className="mt-2 line-clamp-2 min-h-[40px] text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {product.description ||
+                          "A useful product listed by a campus student."}
                       </p>
 
                       {/* PRICE */}
-
-                      <div className="mt-4 flex items-end justify-between">
+                      <div className="mt-4 flex items-end justify-between gap-4">
                         <div>
-                          <p className="text-2xl font-bold text-slate-950">
+                          <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
                             ₹
                             {Number(product.price || 0).toLocaleString("en-IN")}
                           </p>
 
                           {product.listingType === "Rent" &&
-                            product.rentalPricePerDay > 0 && (
-                              <p className="mt-1 text-xs font-semibold text-blue-600">
+                            Number(product.rentalPricePerDay || 0) > 0 && (
+                              <p className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
                                 ₹
                                 {Number(
                                   product.rentalPricePerDay,
@@ -779,58 +1014,62 @@ function Marketplace() {
                               </p>
                             )}
 
-                          {product.aiFairPrice && (
-                            <p className="mt-1 text-xs font-medium text-green-600">
-                              AI fair price: ₹
-                              {Number(product.aiFairPrice).toLocaleString(
-                                "en-IN",
-                              )}
-                            </p>
-                          )}
+                          {product.aiFairPrice &&
+                            Number(product.aiFairPrice) > 0 && (
+                              <p className="mt-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                AI fair price ₹
+                                {Number(product.aiFairPrice).toLocaleString(
+                                  "en-IN",
+                                )}
+                              </p>
+                            )}
                         </div>
 
                         <button
                           type="button"
-                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-700"
+                          onClick={() => {
+                            // Cart integration comes next.
+                          }}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200 transition hover:scale-105 hover:bg-blue-700 dark:bg-blue-500 dark:shadow-blue-950/30"
                           aria-label="Add to cart"
                         >
-                          <ShoppingCart size={18} />
+                          <ShoppingCart size={17} />
                         </button>
                       </div>
 
                       {/* SELLER */}
+                      <div className="mt-auto pt-5">
+                        <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-black text-white">
+                                {getSellerInitial(sellerName)}
+                              </div>
 
-                      <div className="mt-5 border-t border-slate-100 pt-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
-                              {product.seller?.name?.charAt(0)?.toUpperCase() ||
-                                "S"}
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
+                                  {sellerName}
+                                </p>
+
+                                <p className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                                  {product.seller?.isVerified && (
+                                    <ShieldCheck
+                                      size={11}
+                                      className="text-emerald-500"
+                                    />
+                                  )}
+                                  Student seller
+                                </p>
+                              </div>
                             </div>
 
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-700">
-                                {product.seller?.name || "Campus Seller"}
-                              </p>
+                            <div className="flex max-w-[100px] shrink-0 items-center gap-1 text-[10px] font-semibold text-slate-400">
+                              <MapPin size={12} />
 
-                              <p className="flex items-center gap-1 text-xs text-slate-400">
-                                {product.seller?.isVerified && (
-                                  <ShieldCheck
-                                    size={12}
-                                    className="text-green-600"
-                                  />
-                                )}
-                                Student Seller
-                              </p>
+                              <span className="truncate">
+                                {product.location || "Campus"}
+                              </span>
                             </div>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-1 text-xs text-slate-400">
-                            <MapPin size={13} />
-
-                            <span className="max-w-[90px] truncate">
-                              {product.location || "Campus"}
-                            </span>
                           </div>
                         </div>
                       </div>
@@ -840,16 +1079,15 @@ function Marketplace() {
               })}
             </div>
 
-            {/* =================================================
-                  PAGINATION
-              ================================================= */}
-
+            {/* PAGINATION */}
             {pagination.totalPages > 1 && (
-              <div className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-slate-200 pt-7 sm:flex-row">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <span>
-                    Page {pagination.currentPage} of {pagination.totalPages}
+              <div className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-slate-200 pt-7 dark:border-slate-800 sm:flex-row">
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                  <span className="font-bold text-slate-600 dark:text-slate-300">
+                    Page {pagination.currentPage || page}
                   </span>
+
+                  <span>of {pagination.totalPages}</span>
 
                   <span className="hidden text-slate-300 sm:inline">|</span>
 
@@ -858,56 +1096,51 @@ function Marketplace() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {/* PREVIOUS */}
-
                   <button
                     type="button"
-                    disabled={!pagination.hasPreviousPage}
+                    disabled={!hasPreviousPage}
                     onClick={() =>
                       setPage((previous) => Math.max(previous - 1, 1))
                     }
-                    className="flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   >
-                    <ChevronLeft size={17} />
+                    <ChevronLeft size={16} />
 
                     <span className="hidden sm:inline">Previous</span>
                   </button>
 
-                  {/* PAGE NUMBERS */}
-
-                  <div className="flex items-center gap-1">
-                    {getPageNumbers().map((pageNumber) => (
-                      <button
-                        key={pageNumber}
-                        type="button"
-                        onClick={() => setPage(pageNumber)}
-                        className={`h-10 min-w-10 rounded-xl px-3 text-sm font-semibold transition ${
-                          pageNumber === page ?
-                            "bg-blue-600 text-white"
-                          : "border border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:text-blue-600"
-                        }`}
-                      >
-                        {pageNumber}
-                      </button>
-                    ))}
-                  </div>
+                  {/* NUMBERS */}
+                  {getPageNumbers().map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setPage(pageNumber)}
+                      className={`flex h-10 min-w-10 items-center justify-center rounded-xl px-3 text-xs font-black transition ${
+                        pageNumber === page ?
+                          "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:bg-blue-500 dark:shadow-blue-950/30"
+                        : "border border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
 
                   {/* NEXT */}
-
                   <button
                     type="button"
-                    disabled={!pagination.hasNextPage}
+                    disabled={!hasNextPage}
                     onClick={() =>
                       setPage((previous) =>
                         Math.min(previous + 1, pagination.totalPages),
                       )
                     }
-                    className="flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   >
                     <span className="hidden sm:inline">Next</span>
 
-                    <ChevronRight size={17} />
+                    <ChevronRight size={16} />
                   </button>
                 </div>
               </div>
@@ -915,30 +1148,34 @@ function Marketplace() {
           </>
         )}
 
-        {/* =================================================
-            EMPTY
-        ================================================= */}
-
+        {/* EMPTY */}
         {!loading && !error && products.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-              <Package size={30} className="text-slate-400" />
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
+              {hasActiveFilters ?
+                <Search size={29} />
+              : <Package size={29} />}
             </div>
 
-            <h3 className="mt-5 text-xl font-bold text-slate-900">
-              No products found
+            <h3 className="mt-5 text-xl font-black text-slate-900 dark:text-white">
+              {hasActiveFilters ?
+                "No matching products"
+              : "No products available"}
             </h3>
 
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Try changing your search or filters to find more products.
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
+              {hasActiveFilters ?
+                "Try changing your search or filters to discover more products."
+              : "There are no active listings available right now."}
             </p>
 
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:bg-blue-500 dark:shadow-blue-950/30"
               >
+                <RefreshCw size={15} />
                 Clear Filters
               </button>
             )}

@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 
 /*
@@ -17,14 +18,18 @@ const createProduct = async (req, res) => {
       listingType,
       images,
       location,
+      locationCoordinates,
       college,
+      rentalPricePerDay,
+      rentalDeposit,
+      minimumRentalDays,
+      maximumRentalDays,
+      rentalInstructions,
     } = req.body || {};
 
-    /*
-    |--------------------------------------------------------------------------
-    | Check authenticated user
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // AUTHENTICATION
+    // ----------------------------------------------------------
 
     if (!req.user || !req.user._id) {
       return res.status(401).json({
@@ -33,11 +38,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Required fields
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // REQUIRED FIELDS
+    // ----------------------------------------------------------
 
     if (
       !title ||
@@ -52,11 +55,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validate price
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // PRICE
+    // ----------------------------------------------------------
 
     const numericPrice = Number(price);
 
@@ -67,11 +68,54 @@ const createProduct = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Create Product
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // LOCATION COORDINATES
+    // ----------------------------------------------------------
+
+    let parsedCoordinates = null;
+
+    if (locationCoordinates) {
+      try {
+        parsedCoordinates =
+          typeof locationCoordinates === "string" ?
+            JSON.parse(locationCoordinates)
+          : locationCoordinates;
+
+        if (
+          parsedCoordinates &&
+          parsedCoordinates.lat !== undefined &&
+          parsedCoordinates.lng !== undefined
+        ) {
+          const lat = Number(parsedCoordinates.lat);
+
+          const lng = Number(parsedCoordinates.lng);
+
+          if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            lat >= -90 &&
+            lat <= 90 &&
+            lng >= -180 &&
+            lng <= 180
+          ) {
+            parsedCoordinates = {
+              lat,
+              lng,
+            };
+          } else {
+            parsedCoordinates = null;
+          }
+        } else {
+          parsedCoordinates = null;
+        }
+      } catch {
+        parsedCoordinates = null;
+      }
+    }
+
+    // ----------------------------------------------------------
+    // CREATE
+    // ----------------------------------------------------------
 
     const product = await Product.create({
       title: String(title).trim(),
@@ -90,20 +134,34 @@ const createProduct = async (req, res) => {
 
       location: location ? String(location).trim() : "",
 
+      locationCoordinates: parsedCoordinates,
+
       seller: req.user._id,
 
       college: college || req.user.college || "Narula Institute of Technology",
 
       isAvailable: true,
+
+      rentalPricePerDay: Number(rentalPricePerDay) || 0,
+
+      rentalDeposit: Number(rentalDeposit) || 0,
+
+      minimumRentalDays: Number(minimumRentalDays) || 1,
+
+      maximumRentalDays: Number(maximumRentalDays) || 30,
+
+      rentalInstructions:
+        rentalInstructions ? String(rentalInstructions).trim() : "",
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Populate seller
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // POPULATE SELLER
+    // ----------------------------------------------------------
 
-    await product.populate("seller", "name email studentId college isVerified");
+    await product.populate(
+      "seller",
+      "name email studentId college isVerified isActive",
+    );
 
     return res.status(201).json({
       success: true,
@@ -146,11 +204,9 @@ const getProducts = async (req, res) => {
 
     const skip = (currentPage - 1) * currentLimit;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Filters
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // FILTER
+    // ----------------------------------------------------------
 
     const filter = {
       isAvailable: true,
@@ -187,11 +243,9 @@ const getProducts = async (req, res) => {
       filter.listingType = listingType;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Price Filter
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // PRICE FILTER
+    // ----------------------------------------------------------
 
     const minimumPrice = Number(minPrice);
 
@@ -219,11 +273,9 @@ const getProducts = async (req, res) => {
       };
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Sorting
-    |--------------------------------------------------------------------------
-    */
+    // ----------------------------------------------------------
+    // SORT
+    // ----------------------------------------------------------
 
     let sortOption = {
       createdAt: -1,
@@ -254,15 +306,19 @@ const getProducts = async (req, res) => {
       };
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Fetch Products
-    |--------------------------------------------------------------------------
-    */
+    if (sort === "rating") {
+      sortOption = {
+        averageRating: -1,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // FETCH
+    // ----------------------------------------------------------
 
     const [products, totalProducts] = await Promise.all([
       Product.find(filter)
-        .populate("seller", "name email studentId college isVerified")
+        .populate("seller", "name email studentId college isVerified isActive")
         .sort(sortOption)
         .skip(skip)
         .limit(currentLimit),
@@ -281,6 +337,8 @@ const getProducts = async (req, res) => {
         totalPages,
         totalProducts,
         limit: currentLimit,
+        hasNextPage: currentPage < totalPages,
+        hasPreviousPage: currentPage > 1,
       },
     });
   } catch (error) {
@@ -303,9 +361,16 @@ const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
     const product = await Product.findById(id).populate(
       "seller",
-      "name email studentId college isVerified",
+      "name email studentId college isVerified isActive",
     );
 
     if (!product) {
@@ -315,12 +380,7 @@ const getProductById = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Increase views
-    |--------------------------------------------------------------------------
-    */
-
+    // Increase views
     product.views = (product.views || 0) + 1;
 
     await product.save();
@@ -357,7 +417,7 @@ const getMyProducts = async (req, res) => {
     const products = await Product.find({
       seller: req.user._id,
     })
-      .populate("seller", "name email studentId college isVerified")
+      .populate("seller", "name email studentId college isVerified isActive")
       .sort({
         createdAt: -1,
       });
@@ -378,7 +438,7 @@ const getMyProducts = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| Delete Product
+| Delete Product - Seller
 |--------------------------------------------------------------------------
 */
 
@@ -386,24 +446,12 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication
-    |--------------------------------------------------------------------------
-    */
-
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
         message: "Authentication required.",
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Find Product
-    |--------------------------------------------------------------------------
-    */
 
     const product = await Product.findById(id);
 
@@ -414,24 +462,12 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Only Seller Can Delete
-    |--------------------------------------------------------------------------
-    */
-
     if (product.seller.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this product.",
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Delete
-    |--------------------------------------------------------------------------
-    */
 
     await Product.findByIdAndDelete(id);
 
@@ -441,6 +477,272 @@ const deleteProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Product Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to delete product.",
+    });
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN - GET ALL PRODUCTS
+|--------------------------------------------------------------------------
+*/
+
+const adminGetProducts = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      category = "",
+      listingType = "",
+      status = "",
+      sort = "newest",
+    } = req.query || {};
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+
+    const currentLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
+    const skip = (currentPage - 1) * currentLimit;
+
+    const filter = {};
+
+    // ----------------------------------------------------------
+    // SEARCH
+    // ----------------------------------------------------------
+
+    const cleanSearch = String(search || "").trim();
+
+    if (cleanSearch) {
+      filter.$or = [
+        {
+          title: {
+            $regex: cleanSearch,
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: cleanSearch,
+            $options: "i",
+          },
+        },
+        {
+          college: {
+            $regex: cleanSearch,
+            $options: "i",
+          },
+        },
+      ];
+    }
+
+    // ----------------------------------------------------------
+    // CATEGORY
+    // ----------------------------------------------------------
+
+    if (category) {
+      filter.category = category;
+    }
+
+    // ----------------------------------------------------------
+    // LISTING TYPE
+    // ----------------------------------------------------------
+
+    if (listingType) {
+      filter.listingType = listingType;
+    }
+
+    // ----------------------------------------------------------
+    // STATUS
+    // ----------------------------------------------------------
+
+    if (status === "available") {
+      filter.isAvailable = true;
+    }
+
+    if (status === "unavailable") {
+      filter.isAvailable = false;
+    }
+
+    // ----------------------------------------------------------
+    // SORT
+    // ----------------------------------------------------------
+
+    let sortOption = {
+      createdAt: -1,
+    };
+
+    if (sort === "oldest") {
+      sortOption = {
+        createdAt: 1,
+      };
+    }
+
+    if (sort === "price-low") {
+      sortOption = {
+        price: 1,
+      };
+    }
+
+    if (sort === "price-high") {
+      sortOption = {
+        price: -1,
+      };
+    }
+
+    if (sort === "popular") {
+      sortOption = {
+        views: -1,
+        wishlistCount: -1,
+      };
+    }
+
+    if (sort === "rating") {
+      sortOption = {
+        averageRating: -1,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // FETCH
+    // ----------------------------------------------------------
+
+    const [products, totalProducts] = await Promise.all([
+      Product.find(filter)
+        .populate("seller", "name email studentId college isVerified isActive")
+        .sort(sortOption)
+        .skip(skip)
+        .limit(currentLimit)
+        .lean(),
+
+      Product.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalProducts / currentLimit);
+
+    return res.status(200).json({
+      success: true,
+      products,
+
+      pagination: {
+        currentPage,
+        totalPages,
+        totalProducts,
+        limit: currentLimit,
+        hasNextPage: currentPage < totalPages,
+        hasPreviousPage: currentPage > 1,
+      },
+    });
+  } catch (error) {
+    console.error("Admin Get Products Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load admin products.",
+    });
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN - UPDATE PRODUCT AVAILABILITY
+|--------------------------------------------------------------------------
+*/
+
+const adminUpdateProductAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { isAvailable } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
+    if (typeof isAvailable !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isAvailable must be true or false.",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    product.isAvailable = isAvailable;
+
+    await product.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        isAvailable ?
+          "Product activated successfully."
+        : "Product hidden successfully.",
+
+      product: {
+        _id: product._id,
+        title: product.title,
+        isAvailable: product.isAvailable,
+      },
+    });
+  } catch (error) {
+    console.error("Admin Update Product Availability Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update product availability.",
+    });
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN - DELETE PRODUCT
+|--------------------------------------------------------------------------
+*/
+
+const adminDeleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    await Product.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Admin Delete Product Error:", error);
 
     return res.status(500).json({
       success: false,
@@ -461,4 +763,9 @@ module.exports = {
   getProductById,
   getMyProducts,
   deleteProduct,
+
+  // Admin
+  adminGetProducts,
+  adminUpdateProductAvailability,
+  adminDeleteProduct,
 };

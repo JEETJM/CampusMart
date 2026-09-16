@@ -527,8 +527,6 @@ const updateSellerOrderStatus = async (req, res) => {
         });
       }
 
-      // Do not allow seller to cancel
-      // an online paid/unpaid order here.
       return res.status(400).json({
         success: false,
         message:
@@ -688,6 +686,468 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+// ============================================================
+// ADMIN - GET ALL ORDERS
+// ============================================================
+const adminGetOrders = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      orderStatus = "",
+      paymentStatus = "",
+      paymentMethod = "",
+      sort = "newest",
+    } = req.query || {};
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+
+    const currentLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
+    const skip = (currentPage - 1) * currentLimit;
+
+    // ==========================================================
+    // BUILD FILTER
+    // ==========================================================
+    const filter = {};
+
+    if (orderStatus) {
+      filter.orderStatus = orderStatus;
+    }
+
+    if (paymentStatus) {
+      filter.paymentStatus = paymentStatus;
+    }
+
+    if (paymentMethod) {
+      filter.paymentMethod = paymentMethod;
+    }
+
+    // ==========================================================
+    // GET ORDERS
+    // ==========================================================
+    let query = Order.find(filter)
+      .populate("buyer", "name email studentId college isVerified isActive")
+      .populate(
+        "items.seller",
+        "name email studentId college isVerified isActive",
+      )
+      .populate("items.product", "title images category condition price");
+
+    // ==========================================================
+    // SEARCH
+    // ==========================================================
+    const cleanSearch = String(search || "").trim();
+
+    let orders = await query.sort({
+      createdAt: -1,
+    });
+
+    if (cleanSearch) {
+      const normalizedSearch = cleanSearch.toLowerCase();
+
+      orders = orders.filter((order) => {
+        const orderNumber = String(order.orderNumber || "").toLowerCase();
+
+        const buyerName = String(order.buyer?.name || "").toLowerCase();
+
+        const buyerEmail = String(order.buyer?.email || "").toLowerCase();
+
+        const studentId = String(order.buyer?.studentId || "").toLowerCase();
+
+        const productMatch = order.items.some(
+          (item) =>
+            String(item.title || "")
+              .toLowerCase()
+              .includes(normalizedSearch) ||
+            String(item.product?.title || "")
+              .toLowerCase()
+              .includes(normalizedSearch),
+        );
+
+        return (
+          orderNumber.includes(normalizedSearch) ||
+          buyerName.includes(normalizedSearch) ||
+          buyerEmail.includes(normalizedSearch) ||
+          studentId.includes(normalizedSearch) ||
+          productMatch
+        );
+      });
+    }
+
+    // ==========================================================
+    // SORT
+    // ==========================================================
+    if (sort === "oldest") {
+      orders.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
+
+    if (sort === "amount-low") {
+      orders.sort((a, b) => Number(a.subtotal || 0) - Number(b.subtotal || 0));
+    }
+
+    if (sort === "amount-high") {
+      orders.sort((a, b) => Number(b.subtotal || 0) - Number(a.subtotal || 0));
+    }
+
+    // ==========================================================
+    // PAGINATION AFTER SEARCH
+    // ==========================================================
+    const totalOrders = orders.length;
+
+    const totalPages = Math.ceil(totalOrders / currentLimit);
+
+    const paginatedOrders = orders.slice(skip, skip + currentLimit);
+
+    // ==========================================================
+    // SUMMARY
+    // ==========================================================
+    const [
+      allOrders,
+      placedOrders,
+      confirmedOrders,
+      readyOrders,
+      completedOrders,
+      cancelledOrders,
+      paidOrders,
+      pendingPaymentOrders,
+    ] = await Promise.all([
+      Order.countDocuments({}),
+
+      Order.countDocuments({
+        orderStatus: "Placed",
+      }),
+
+      Order.countDocuments({
+        orderStatus: "Confirmed",
+      }),
+
+      Order.countDocuments({
+        orderStatus: "Ready for Pickup",
+      }),
+
+      Order.countDocuments({
+        orderStatus: "Completed",
+      }),
+
+      Order.countDocuments({
+        orderStatus: "Cancelled",
+      }),
+
+      Order.countDocuments({
+        paymentStatus: "Paid",
+      }),
+
+      Order.countDocuments({
+        paymentStatus: "Pending",
+      }),
+    ]);
+
+    const revenueResult = await Order.aggregate([
+      {
+        $match: {
+          $or: [
+            {
+              paymentStatus: "Paid",
+            },
+            {
+              paymentMethod: "Cash on Pickup",
+              orderStatus: "Completed",
+            },
+          ],
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: "$subtotal",
+          },
+        },
+      },
+    ]);
+
+    const totalRevenue = Number(revenueResult[0]?.total || 0);
+
+    return res.status(200).json({
+      success: true,
+
+      orders: paginatedOrders,
+
+      pagination: {
+        currentPage,
+        totalPages,
+        totalOrders,
+        limit: currentLimit,
+        hasNextPage: currentPage < totalPages,
+        hasPreviousPage: currentPage > 1,
+      },
+
+      summary: {
+        totalOrders: allOrders,
+        placedOrders,
+        confirmedOrders,
+        readyOrders,
+        completedOrders,
+        cancelledOrders,
+        paidOrders,
+        pendingPaymentOrders,
+        totalRevenue,
+      },
+    });
+  } catch (error) {
+    console.error("Admin Get Orders Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load admin orders.",
+    });
+  }
+};
+
+// ============================================================
+// ADMIN - GET ORDER BY ID
+// ============================================================
+const adminGetOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate(
+        "buyer",
+        "name email studentId college isVerified isActive phone",
+      )
+      .populate(
+        "items.seller",
+        "name email studentId college isVerified isActive phone",
+      )
+      .populate(
+        "items.product",
+        "title images category condition price listingType",
+      );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error("Admin Get Order By ID Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load order details.",
+    });
+  }
+};
+
+// ============================================================
+// ADMIN - UPDATE ORDER STATUS
+// ============================================================
+const adminUpdateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { orderStatus, paymentStatus } = req.body || {};
+
+    const allowedOrderStatuses = [
+      "Placed",
+      "Confirmed",
+      "Ready for Pickup",
+      "Completed",
+      "Cancelled",
+    ];
+
+    const allowedPaymentStatuses = ["Pending", "Paid", "Failed"];
+
+    if (
+      orderStatus !== undefined &&
+      !allowedOrderStatuses.includes(orderStatus)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status.",
+      });
+    }
+
+    if (
+      paymentStatus !== undefined &&
+      !allowedPaymentStatuses.includes(paymentStatus)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment status.",
+      });
+    }
+
+    if (orderStatus === undefined && paymentStatus === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Provide orderStatus or paymentStatus.",
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    const previousOrderStatus = order.orderStatus;
+
+    const previousPaymentStatus = order.paymentStatus;
+
+    // ========================================================
+    // UPDATE ORDER STATUS
+    // ========================================================
+    if (orderStatus !== undefined) {
+      order.orderStatus = orderStatus;
+    }
+
+    // ========================================================
+    // UPDATE PAYMENT STATUS
+    // ========================================================
+    if (paymentStatus !== undefined) {
+      order.paymentStatus = paymentStatus;
+
+      if (paymentStatus === "Paid" && !order.paidAt) {
+        order.paidAt = new Date();
+      }
+    }
+
+    await order.save();
+
+    // ========================================================
+    // NOTIFY BUYER - ORDER STATUS
+    // ========================================================
+    if (orderStatus !== undefined && previousOrderStatus !== orderStatus) {
+      await createNotification({
+        user: order.buyer,
+        type: "order",
+
+        title:
+          orderStatus === "Cancelled" ? "Order cancelled" : (
+            "Order status updated"
+          ),
+
+        message:
+          orderStatus === "Cancelled" ?
+            `Your order ${order.orderNumber} has been cancelled by the administrator.`
+          : `Your order ${order.orderNumber} is now "${orderStatus}".`,
+
+        link: `/orders/${order._id}`,
+      });
+    }
+
+    // ========================================================
+    // NOTIFY BUYER - PAYMENT STATUS
+    // ========================================================
+    if (
+      paymentStatus !== undefined &&
+      previousPaymentStatus !== paymentStatus
+    ) {
+      await createNotification({
+        user: order.buyer,
+        type: "order",
+
+        title:
+          paymentStatus === "Paid" ? "Payment received" : (
+            "Payment status updated"
+          ),
+
+        message: `Payment status for order ${order.orderNumber} is now "${paymentStatus}".`,
+
+        link: `/orders/${order._id}`,
+      });
+    }
+
+    // ========================================================
+    // NOTIFY SELLERS
+    // ========================================================
+    const sellerIds = [
+      ...new Set(
+        order.items
+          .filter((item) => item.seller)
+          .map((item) => String(item.seller)),
+      ),
+    ];
+
+    for (const sellerId of sellerIds) {
+      if (orderStatus !== undefined && previousOrderStatus !== orderStatus) {
+        await createNotification({
+          user: sellerId,
+          type: "order",
+
+          title: "Order status updated",
+
+          message: `Order ${order.orderNumber} is now "${orderStatus}" according to the administrator.`,
+
+          link: `/seller/orders`,
+        });
+      }
+
+      if (
+        paymentStatus !== undefined &&
+        previousPaymentStatus !== paymentStatus
+      ) {
+        await createNotification({
+          user: sellerId,
+          type: "order",
+
+          title: "Payment status updated",
+
+          message: `Payment status for order ${order.orderNumber} is now "${paymentStatus}".`,
+
+          link: `/seller/orders`,
+        });
+      }
+    }
+
+    // ========================================================
+    // POPULATE RESPONSE
+    // ========================================================
+    await order.populate(
+      "buyer",
+      "name email studentId college isVerified isActive phone",
+    );
+
+    await order.populate(
+      "items.seller",
+      "name email studentId college isVerified isActive phone",
+    );
+
+    await order.populate(
+      "items.product",
+      "title images category condition price listingType",
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Order updated successfully.",
+
+      order,
+    });
+  } catch (error) {
+    console.error("Admin Update Order Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update order.",
+    });
+  }
+};
+
 // ===============================
 // EXPORTS
 // ===============================
@@ -698,4 +1158,9 @@ module.exports = {
   cancelOrder,
   getSellerOrders,
   updateSellerOrderStatus,
+
+  // ADMIN
+  adminGetOrders,
+  adminGetOrderById,
+  adminUpdateOrderStatus,
 };
