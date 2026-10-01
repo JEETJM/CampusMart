@@ -5,24 +5,60 @@ const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 const createNotification = require("../utils/createNotification");
 
-// ===============================
-// RAZORPAY INSTANCE
-// ===============================
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// ============================================================
+// RAZORPAY ENVIRONMENT CHECK
+// ============================================================
 
-// =========================================================
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+console.log("RAZORPAY_KEY_ID loaded:", Boolean(razorpayKeyId));
+
+console.log("RAZORPAY_KEY_SECRET loaded:", Boolean(razorpayKeySecret));
+
+// ============================================================
+// RAZORPAY INSTANCE
+// ============================================================
+
+let razorpay = null;
+
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpay = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret,
+  });
+
+  console.log("Razorpay initialized successfully.");
+} else {
+  console.error(
+    "Razorpay initialization skipped: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing.",
+  );
+}
+
+// ============================================================
 // CREATE RAZORPAY ORDER
-// =========================================================
+// ============================================================
+
 const createPaymentOrder = async (req, res) => {
   try {
+    // ========================================================
+    // CHECK RAZORPAY CONFIGURATION
+    // ========================================================
+
+    if (!razorpay) {
+      return res.status(503).json({
+        success: false,
+        message:
+          "Online payment is temporarily unavailable. Razorpay is not configured.",
+      });
+    }
+
+    // ========================================================
+    // GET ORDER ID
+    // ========================================================
+
     const { orderId } = req.body || {};
 
-    // ===============================
-    // VALIDATE ORDER ID
-    // ===============================
     if (!orderId) {
       return res.status(400).json({
         success: false,
@@ -30,9 +66,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // FIND CAMPUSMART ORDER
-    // ===============================
+    // ========================================================
+
     const order = await Order.findById(orderId);
 
     if (!order) {
@@ -42,9 +79,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // BUYER AUTHORIZATION
-    // ===============================
+    // ========================================================
+
     if (String(order.buyer) !== String(req.user._id)) {
       return res.status(403).json({
         success: false,
@@ -52,9 +90,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // PAYMENT METHOD
-    // ===============================
+    // ========================================================
+
     if (order.paymentMethod !== "Online") {
       return res.status(400).json({
         success: false,
@@ -62,9 +101,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // ORDER STATUS CHECK
-    // ===============================
+    // ========================================================
+
     if (order.orderStatus === "Cancelled") {
       return res.status(400).json({
         success: false,
@@ -79,9 +119,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // ALREADY PAID
-    // ===============================
+    // ========================================================
+
     if (order.paymentStatus === "Paid") {
       return res.status(400).json({
         success: false,
@@ -89,9 +130,10 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // VALIDATE AMOUNT
-    // ===============================
+    // ========================================================
+
     const amountInPaise = Math.round(Number(order.subtotal) * 100);
 
     if (!Number.isFinite(amountInPaise) || amountInPaise <= 0) {
@@ -101,12 +143,13 @@ const createPaymentOrder = async (req, res) => {
       });
     }
 
-    let razorpayOrder;
+    let razorpayOrder = null;
 
-    // =====================================================
+    // ========================================================
     // RETRY PAYMENT
-    // Reuse existing Razorpay order when available.
-    // =====================================================
+    // REUSE EXISTING RAZORPAY ORDER
+    // ========================================================
+
     if (order.razorpayOrderId) {
       try {
         const existingOrder = await razorpay.orders.fetch(
@@ -129,9 +172,10 @@ const createPaymentOrder = async (req, res) => {
       }
     }
 
-    // =====================================================
+    // ========================================================
     // CREATE NEW RAZORPAY ORDER
-    // =====================================================
+    // ========================================================
+
     if (!razorpayOrder) {
       razorpayOrder = await razorpay.orders.create({
         amount: amountInPaise,
@@ -149,14 +193,16 @@ const createPaymentOrder = async (req, res) => {
       await order.save();
     }
 
-    // ===============================
+    // ========================================================
     // RESPONSE
-    // ===============================
+    // ========================================================
+
     return res.status(200).json({
       success: true,
       message: "Payment order created successfully.",
 
-      keyId: process.env.RAZORPAY_KEY_ID,
+      // Public Key ID only
+      keyId: razorpayKeyId,
 
       orderId: razorpayOrder.id,
 
@@ -176,11 +222,28 @@ const createPaymentOrder = async (req, res) => {
   }
 };
 
-// =========================================================
+// ============================================================
 // VERIFY PAYMENT
-// =========================================================
+// ============================================================
+
 const verifyPayment = async (req, res) => {
   try {
+    // ========================================================
+    // CHECK RAZORPAY CONFIGURATION
+    // ========================================================
+
+    if (!razorpay || !razorpayKeySecret) {
+      return res.status(503).json({
+        success: false,
+        message:
+          "Online payment is temporarily unavailable. Razorpay is not configured.",
+      });
+    }
+
+    // ========================================================
+    // GET PAYMENT DATA
+    // ========================================================
+
     const {
       campusMartOrderId,
       razorpay_order_id,
@@ -188,9 +251,10 @@ const verifyPayment = async (req, res) => {
       razorpay_signature,
     } = req.body || {};
 
-    // ===============================
+    // ========================================================
     // VALIDATION
-    // ===============================
+    // ========================================================
+
     if (
       !campusMartOrderId ||
       !razorpay_order_id ||
@@ -203,9 +267,10 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // FIND ORDER
-    // ===============================
+    // ========================================================
+
     const order = await Order.findById(campusMartOrderId);
 
     if (!order) {
@@ -215,9 +280,10 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // BUYER AUTHORIZATION
-    // ===============================
+    // ========================================================
+
     if (String(order.buyer) !== String(req.user._id)) {
       return res.status(403).json({
         success: false,
@@ -225,9 +291,10 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // ALREADY PAID
-    // ===============================
+    // ========================================================
+
     if (order.paymentStatus === "Paid") {
       const populatedExistingOrder = await Order.findById(order._id)
         .populate("buyer", "name email studentId college")
@@ -241,9 +308,10 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // RAZORPAY ORDER MATCH
-    // ===============================
+    // ========================================================
+
     if (!order.razorpayOrderId || order.razorpayOrderId !== razorpay_order_id) {
       return res.status(400).json({
         success: false,
@@ -251,19 +319,21 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // SIGNATURE VERIFICATION
-    // ===============================
+    // ========================================================
+
     const signaturePayload = `${order.razorpayOrderId}|${razorpay_payment_id}`;
 
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", razorpayKeySecret)
       .update(signaturePayload)
       .digest("hex");
 
-    // ===============================
+    // ========================================================
     // INVALID SIGNATURE
-    // ===============================
+    // ========================================================
+
     if (expectedSignature !== razorpay_signature) {
       order.paymentStatus = "Failed";
 
@@ -283,9 +353,10 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ===============================
+    // ========================================================
     // MARK PAYMENT AS PAID
-    // ===============================
+    // ========================================================
+
     order.paymentStatus = "Paid";
 
     order.razorpayPaymentId = razorpay_payment_id;
@@ -296,21 +367,24 @@ const verifyPayment = async (req, res) => {
 
     await order.save();
 
-    // =====================================================
+    // ========================================================
     // CLEAR CART AFTER VERIFIED PAYMENT
-    // =====================================================
+    // ========================================================
+
     const cart = await Cart.findOne({
       user: req.user._id,
     });
 
     if (cart) {
       cart.items = [];
+
       await cart.save();
     }
 
-    // ===============================
+    // ========================================================
     // BUYER PAYMENT NOTIFICATION
-    // ===============================
+    // ========================================================
+
     await createNotification({
       user: order.buyer,
       type: "payment",
@@ -319,9 +393,10 @@ const verifyPayment = async (req, res) => {
       link: `/orders/${order._id}`,
     });
 
-    // ===============================
+    // ========================================================
     // UNIQUE SELLERS
-    // ===============================
+    // ========================================================
+
     const sellerIds = [
       ...new Set(
         order.items
@@ -330,30 +405,33 @@ const verifyPayment = async (req, res) => {
       ),
     ];
 
-    // ===============================
+    // ========================================================
     // SELLER PAYMENT NOTIFICATION
-    // ===============================
+    // ========================================================
+
     for (const sellerId of sellerIds) {
       await createNotification({
         user: sellerId,
         type: "payment",
         title: "Payment received",
         message: `Payment has been received for order ${order.orderNumber}. You can now process the order.`,
-        link: `/seller/orders`,
+        link: "/seller/orders",
       });
     }
 
-    // ===============================
+    // ========================================================
     // POPULATE ORDER
-    // ===============================
+    // ========================================================
+
     const populatedOrder = await Order.findById(order._id)
       .populate("buyer", "name email studentId college")
       .populate("items.product", "title images category condition price")
       .populate("items.seller", "name email studentId college isVerified");
 
-    // ===============================
+    // ========================================================
     // RESPONSE
-    // ===============================
+    // ========================================================
+
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully.",
@@ -369,9 +447,10 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-// =========================================================
+// ============================================================
 // EXPORTS
-// =========================================================
+// ============================================================
+
 module.exports = {
   createPaymentOrder,
   verifyPayment,
