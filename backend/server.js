@@ -24,6 +24,7 @@ const reportRoutes = require("./routes/reportRoutes");
 const rentalRoutes = require("./routes/rentalRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 // ==========================================
 // APP
@@ -146,6 +147,11 @@ app.use("/api/reports", reportRoutes);
 
 // Admin
 app.use("/api/admin", adminRoutes);
+
+
+//AI
+app.use("/api/ai", aiRoutes);
+
 
 // ==========================================
 // 404 ROUTE

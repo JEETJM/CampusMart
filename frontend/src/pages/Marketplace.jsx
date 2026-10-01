@@ -141,6 +141,16 @@ function Marketplace() {
   const [showFilters, setShowFilters] = useState(false);
 
   // ===================================================
+  // AI SMART SEARCH
+  // ===================================================
+
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+
+  const [aiSearchMode, setAiSearchMode] = useState(false);
+
+  const [aiInterpretation, setAiInterpretation] = useState(null);
+
+  // ===================================================
   // WISHLIST - TEMP LOCAL UI
   // ===================================================
 
@@ -207,6 +217,7 @@ function Marketplace() {
     );
 
     setMinPrice(urlMinPrice);
+
     setMaxPrice(urlMaxPrice);
 
     setSort(
@@ -273,10 +284,16 @@ function Marketplace() {
   ]);
 
   // ===================================================
-  // FETCH PRODUCTS
+  // NORMAL PRODUCT FETCH
   // ===================================================
 
   useEffect(() => {
+    // Don't run normal marketplace search while AI
+    // results are being displayed.
+    if (aiSearchMode) {
+      return;
+    }
+
     let cancelled = false;
 
     const fetchProducts = async () => {
@@ -369,7 +386,96 @@ function Marketplace() {
     minPrice,
     maxPrice,
     sort,
+    aiSearchMode,
   ]);
+
+  // ===================================================
+  // AI SMART PRODUCT FINDER
+  // ===================================================
+
+  const handleAISearch = async () => {
+    if (!search.trim()) {
+      setError("Please enter what you are looking for.");
+
+      return;
+    }
+
+    try {
+      setAiSearchLoading(true);
+      setLoading(true);
+      setError("");
+
+      const response = await api.post("/ai/search", {
+        query: search.trim(),
+      });
+
+      if (response.data?.success) {
+        const aiProducts =
+          Array.isArray(response.data.products) ? response.data.products : [];
+
+        setProducts(aiProducts);
+
+        setAiInterpretation(response.data.interpretation || null);
+
+        setAiSearchMode(true);
+
+        setPagination({
+          totalProducts: aiProducts.length,
+          totalPages: 1,
+          currentPage: 1,
+          limit: 20,
+        });
+
+        setPage(1);
+      } else {
+        setProducts([]);
+
+        setAiInterpretation(null);
+
+        setError(response.data?.message || "AI product search failed.");
+      }
+    } catch (searchError) {
+      console.error("AI Search Error:", searchError);
+
+      setProducts([]);
+
+      setAiInterpretation(null);
+
+      setError(
+        searchError.response?.data?.message ||
+          searchError.message ||
+          "AI product search failed.",
+      );
+    } finally {
+      setAiSearchLoading(false);
+      setLoading(false);
+    }
+  };
+
+  // ===================================================
+  // EXIT AI SEARCH
+  // ===================================================
+
+  const exitAISearch = () => {
+    setAiSearchMode(false);
+    setAiInterpretation(null);
+    setPage(1);
+    setError("");
+  };
+
+  // ===================================================
+  // SEARCH INPUT CHANGE
+  // ===================================================
+
+  const handleSearchChange = (event) => {
+    setSearch(event.target.value);
+
+    // New typing means user is preparing a normal search.
+    if (aiSearchMode) {
+      setAiSearchMode(false);
+      setAiInterpretation(null);
+    }
+  };
 
   // ===================================================
   // WISHLIST
@@ -396,6 +502,9 @@ function Marketplace() {
     setMaxPrice("");
     setSort("newest");
     setPage(1);
+
+    setAiSearchMode(false);
+    setAiInterpretation(null);
   };
 
   // ===================================================
@@ -457,13 +566,13 @@ function Marketplace() {
       ================================================== */}
 
       <section className="relative overflow-hidden border-b border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-950">
-        {/* Glows */}
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-600/10" />
 
         <div className="pointer-events-none absolute -right-24 top-10 h-80 w-80 rounded-full bg-indigo-200/30 blur-3xl dark:bg-indigo-500/10" />
 
         <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
           {/* Header */}
+
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-blue-700 dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300">
@@ -503,7 +612,10 @@ function Marketplace() {
             </div>
           </div>
 
-          {/* SEARCH BAR */}
+          {/* =================================================
+              SEARCH BAR
+          ================================================== */}
+
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_55px_rgba(37,99,235,0.09)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20">
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-slate-50 px-4 dark:bg-slate-800">
@@ -515,15 +627,24 @@ function Marketplace() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search books, electronics, cycles..."
+                  onChange={handleSearchChange}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleAISearch();
+                    }
+                  }}
+                  placeholder="Try: laptop under 50000, rent a cycle under 300..."
                   className="min-w-0 flex-1 bg-transparent py-4 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                 />
 
                 {search && (
                   <button
                     type="button"
-                    onClick={() => setSearch("")}
+                    onClick={() => {
+                      setSearch("");
+                      setAiSearchMode(false);
+                      setAiInterpretation(null);
+                    }}
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                     aria-label="Clear search"
                   >
@@ -531,6 +652,26 @@ function Marketplace() {
                   </button>
                 )}
               </div>
+
+              {/* AI SEARCH BUTTON */}
+
+              <button
+                type="button"
+                onClick={handleAISearch}
+                disabled={aiSearchLoading || !search.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:shadow-blue-950/30"
+              >
+                {aiSearchLoading ?
+                  <>
+                    <RefreshCw size={17} className="animate-spin" />
+                    AI Searching...
+                  </>
+                : <>
+                    <Sparkles size={17} />
+                    AI Search
+                  </>
+                }
+              </button>
 
               <button
                 type="button"
@@ -550,9 +691,81 @@ function Marketplace() {
                 )}
               </button>
             </div>
+
+            {/* AI SEARCH HINT */}
+
+            <div className="mt-2 flex items-center gap-2 px-2 pb-1 text-[11px] font-medium text-slate-400">
+              <Sparkles size={12} className="text-blue-500" />
+
+              <span>
+                AI understands natural language, budget, category and
+                buy/rent/exchange intent.
+              </span>
+            </div>
           </div>
 
-          {/* ACTIVE FILTERS */}
+          {/* =================================================
+              AI INTERPRETATION
+          ================================================== */}
+
+          {aiSearchMode && aiInterpretation && (
+            <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50/70 p-5 dark:border-blue-500/20 dark:bg-blue-500/5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles
+                      size={17}
+                      className="text-blue-600 dark:text-blue-400"
+                    />
+
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      CampusMart AI understood your request
+                    </h3>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300">
+                      Category: {aiInterpretation.category || "Any"}
+                    </span>
+
+                    <span className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300">
+                      Type: {aiInterpretation.listingType || "Any"}
+                    </span>
+
+                    <span className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300">
+                      Max Price:{" "}
+                      {aiInterpretation.maxPrice ?
+                        `₹${Number(aiInterpretation.maxPrice).toLocaleString(
+                          "en-IN",
+                        )}`
+                      : "Any"}
+                    </span>
+
+                    {Array.isArray(aiInterpretation.keywords) &&
+                      aiInterpretation.keywords.length > 0 && (
+                        <span className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300">
+                          Keywords: {aiInterpretation.keywords.join(", ")}
+                        </span>
+                      )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={exitAISearch}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/20 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-500/10"
+                >
+                  <X size={14} />
+                  Exit AI Search
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =================================================
+              ACTIVE FILTERS
+          ================================================== */}
+
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {category !== "All" && (
               <button
@@ -561,6 +774,7 @@ function Marketplace() {
                 className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300"
               >
                 {category}
+
                 <X size={13} />
               </button>
             )}
@@ -572,6 +786,7 @@ function Marketplace() {
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
               >
                 {condition}
+
                 <X size={13} />
               </button>
             )}
@@ -583,6 +798,7 @@ function Marketplace() {
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
               >
                 {getListingLabel(listingType)}
+
                 <X size={13} />
               </button>
             )}
@@ -599,7 +815,10 @@ function Marketplace() {
             )}
           </div>
 
-          {/* FILTER PANEL */}
+          {/* =================================================
+              FILTER PANEL
+          ================================================== */}
+
           {showFilters && (
             <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
               <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -627,6 +846,7 @@ function Marketplace() {
 
               <div className="grid gap-5 p-5 md:grid-cols-2 lg:grid-cols-3">
                 {/* CATEGORY */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Category
@@ -653,6 +873,7 @@ function Marketplace() {
                 </div>
 
                 {/* CONDITION */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Condition
@@ -679,6 +900,7 @@ function Marketplace() {
                 </div>
 
                 {/* LISTING TYPE */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Listing Type
@@ -709,6 +931,7 @@ function Marketplace() {
                 </div>
 
                 {/* MIN PRICE */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Minimum Price
@@ -731,6 +954,7 @@ function Marketplace() {
                 </div>
 
                 {/* MAX PRICE */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Maximum Price
@@ -753,6 +977,7 @@ function Marketplace() {
                 </div>
 
                 {/* SORT */}
+
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                     Sort By
@@ -799,16 +1024,19 @@ function Marketplace() {
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* RESULTS HEADER */}
+
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
-                <Store size={18} />
+                {aiSearchMode ?
+                  <Sparkles size={18} />
+                : <Store size={18} />}
               </div>
 
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-                  Marketplace
+                  {aiSearchMode ? "AI Search Results" : "Marketplace"}
                 </h2>
 
                 <p className="mt-0.5 text-xs font-medium text-slate-400">
@@ -824,21 +1052,32 @@ function Marketplace() {
           </div>
 
           <div className="flex items-center gap-2">
-            {hasActiveFilters && (
+            {aiSearchMode && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                <Sparkles size={12} />
+                AI Powered
+              </span>
+            )}
+
+            {hasActiveFilters && !aiSearchMode && (
               <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 sm:inline-flex dark:bg-blue-500/10 dark:text-blue-400">
                 Filters applied
               </span>
             )}
 
-            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-              <ArrowUpDown size={14} />
-              {sortOptions.find((item) => item.value === sort)?.label ||
-                "Newest First"}
-            </div>
+            {!aiSearchMode && (
+              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                <ArrowUpDown size={14} />
+
+                {sortOptions.find((item) => item.value === sort)?.label ||
+                  "Newest First"}
+              </div>
+            )}
           </div>
         </div>
 
         {/* ERROR */}
+
         {error && (
           <div className="mb-7 rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-500/20 dark:bg-red-500/5">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -854,7 +1093,15 @@ function Marketplace() {
 
               <button
                 type="button"
-                onClick={() => setPage(1)}
+                onClick={() => {
+                  setError("");
+
+                  if (aiSearchMode) {
+                    handleAISearch();
+                  } else {
+                    setPage(1);
+                  }
+                }}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
               >
                 <RefreshCw size={15} />
@@ -865,6 +1112,7 @@ function Marketplace() {
         )}
 
         {/* LOADING */}
+
         {loading && !error && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({
@@ -879,6 +1127,7 @@ function Marketplace() {
                 <div className="space-y-4 p-5">
                   <div className="flex justify-between gap-3">
                     <div className="h-3 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+
                     <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
                   </div>
 
@@ -898,6 +1147,7 @@ function Marketplace() {
         )}
 
         {/* PRODUCTS */}
+
         {!loading && !error && products.length > 0 && (
           <>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -916,6 +1166,7 @@ function Marketplace() {
                     className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-[0_24px_60px_rgba(37,99,235,0.12)] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800 dark:hover:shadow-black/30"
                   >
                     {/* IMAGE */}
+
                     <div className="relative h-60 overflow-hidden bg-slate-100 dark:bg-slate-800">
                       <Link
                         to={`/product/${productId}`}
@@ -934,15 +1185,16 @@ function Marketplace() {
                         />
                       </Link>
 
-                      {/* Image gradient */}
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
 
                       {/* Listing badge */}
+
                       <span className="absolute left-3 top-3 rounded-full border border-white/30 bg-emerald-500 px-3 py-1.5 text-[10px] font-black text-white shadow-lg">
                         {getListingLabel(product.listingType)}
                       </span>
 
                       {/* Wishlist */}
+
                       <button
                         type="button"
                         onClick={() => toggleWishlist(productId)}
@@ -962,6 +1214,7 @@ function Marketplace() {
                       </button>
 
                       {/* Verified */}
+
                       {product.seller?.isVerified && (
                         <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-md backdrop-blur dark:bg-slate-900/90 dark:text-slate-200">
                           <BadgeCheck size={12} className="text-blue-500" />
@@ -971,6 +1224,7 @@ function Marketplace() {
                     </div>
 
                     {/* CONTENT */}
+
                     <div className="flex flex-1 flex-col p-5">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">
@@ -996,6 +1250,7 @@ function Marketplace() {
                       </p>
 
                       {/* PRICE */}
+
                       <div className="mt-4 flex items-end justify-between gap-4">
                         <div>
                           <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
@@ -1038,6 +1293,7 @@ function Marketplace() {
                       </div>
 
                       {/* SELLER */}
+
                       <div className="mt-auto pt-5">
                         <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
                           <div className="flex items-center justify-between gap-3">
@@ -1080,7 +1336,8 @@ function Marketplace() {
             </div>
 
             {/* PAGINATION */}
-            {pagination.totalPages > 1 && (
+
+            {!aiSearchMode && pagination.totalPages > 1 && (
               <div className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-slate-200 pt-7 dark:border-slate-800 sm:flex-row">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                   <span className="font-bold text-slate-600 dark:text-slate-300">
@@ -1098,6 +1355,7 @@ function Marketplace() {
 
                 <div className="flex items-center gap-1.5">
                   {/* PREVIOUS */}
+
                   <button
                     type="button"
                     disabled={!hasPreviousPage}
@@ -1112,6 +1370,7 @@ function Marketplace() {
                   </button>
 
                   {/* NUMBERS */}
+
                   {getPageNumbers().map((pageNumber) => (
                     <button
                       key={pageNumber}
@@ -1128,6 +1387,7 @@ function Marketplace() {
                   ))}
 
                   {/* NEXT */}
+
                   <button
                     type="button"
                     disabled={!hasNextPage}
@@ -1149,36 +1409,53 @@ function Marketplace() {
         )}
 
         {/* EMPTY */}
+
         {!loading && !error && products.length === 0 && (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
-              {hasActiveFilters ?
+              {aiSearchMode ?
+                <Sparkles size={29} />
+              : hasActiveFilters ?
                 <Search size={29} />
               : <Package size={29} />}
             </div>
 
             <h3 className="mt-5 text-xl font-black text-slate-900 dark:text-white">
-              {hasActiveFilters ?
+              {aiSearchMode ?
+                "AI could not find matching products"
+              : hasActiveFilters ?
                 "No matching products"
               : "No products available"}
             </h3>
 
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
-              {hasActiveFilters ?
+              {aiSearchMode ?
+                "Try another natural-language request, a different budget, or another product category."
+              : hasActiveFilters ?
                 "Try changing your search or filters to discover more products."
               : "There are no active listings available right now."}
             </p>
 
-            {hasActiveFilters && (
+            {aiSearchMode ?
               <button
                 type="button"
-                onClick={clearFilters}
+                onClick={exitAISearch}
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:bg-blue-500 dark:shadow-blue-950/30"
               >
-                <RefreshCw size={15} />
-                Clear Filters
+                <Search size={15} />
+                Back to Marketplace
               </button>
-            )}
+            : hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 dark:bg-blue-500 dark:shadow-blue-950/30"
+                >
+                  <RefreshCw size={15} />
+                  Clear Filters
+                </button>
+              )
+            }
           </div>
         )}
       </main>

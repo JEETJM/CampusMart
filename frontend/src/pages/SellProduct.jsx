@@ -12,6 +12,8 @@ import {
   CalendarDays,
   Banknote,
   Clock3,
+  TrendingUp,
+  CircleDollarSign,
 } from "lucide-react";
 
 import api from "../services/api";
@@ -45,7 +47,6 @@ function SellProduct() {
     listingType: "Sell",
     location: "",
 
-    // Rental fields
     rentalPricePerDay: "",
     rentalDeposit: "",
     minimumRentalDays: "1",
@@ -56,9 +57,15 @@ function SellProduct() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [locationCoordinates, setLocationCoordinates] = useState(null);
+
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+
+  // AI Fair Price states
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiPrediction, setAiPrediction] = useState(null);
 
   const isRent = formData.listingType === "Rent";
 
@@ -70,8 +77,14 @@ function SellProduct() {
       [name]: value,
     }));
 
-    if (message) {
-      setMessage("");
+    setMessage("");
+    setAiError("");
+
+    // Clear old AI prediction when important product data changes.
+    if (
+      ["title", "category", "condition", "price", "description"].includes(name)
+    ) {
+      setAiPrediction(null);
     }
   };
 
@@ -128,6 +141,102 @@ function SellProduct() {
     return response.data.imageUrl;
   };
 
+  // =========================================================
+  // AI FAIR PRICE PREDICTOR
+  // =========================================================
+
+  const handleAiFairPrice = async () => {
+    const token = localStorage.getItem("campusmart_token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!formData.title.trim()) {
+      setAiError("Please enter a product title first.");
+      return;
+    }
+
+    if (!formData.category) {
+      setAiError("Please select a product category first.");
+      return;
+    }
+
+    if (!formData.condition) {
+      setAiError("Please select the product condition.");
+      return;
+    }
+
+    if (formData.price === "" || Number(formData.price) <= 0) {
+      setAiError("Please enter a valid product price first.");
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+      setAiError("");
+      setAiPrediction(null);
+
+      const response = await api.post("/ai/fair-price", {
+        title: formData.title.trim(),
+        category: formData.category,
+        condition: formData.condition,
+        price: Number(formData.price),
+        description: formData.description.trim(),
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "AI price prediction failed.",
+        );
+      }
+
+      setAiPrediction(response.data.prediction);
+    } catch (error) {
+      console.error("AI Fair Price Error:", error);
+
+      setAiError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to calculate fair price. Please try again.",
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const formatPrice = (price) => {
+    if (price === null || price === undefined) {
+      return "₹0";
+    }
+
+    return `₹${Number(price).toLocaleString("en-IN")}`;
+  };
+
+  const getAiStatusClasses = (status) => {
+    switch (status) {
+      case "High":
+        return "border-red-200 bg-red-50 text-red-700";
+
+      case "Slightly High":
+        return "border-orange-200 bg-orange-50 text-orange-700";
+
+      case "Competitive":
+        return "border-green-200 bg-green-50 text-green-700";
+
+      case "Very Competitive":
+        return "border-green-200 bg-green-50 text-green-700";
+
+      default:
+        return "border-blue-200 bg-blue-50 text-blue-700";
+    }
+  };
+
+  // =========================================================
+  // SUBMIT PRODUCT
+  // =========================================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -157,12 +266,12 @@ function SellProduct() {
       setMessage("Please enter a valid product price.");
       return;
     }
-    if (!formData.location.trim()) {
-  setMessage("Please select a pickup location.");
-  return;
-}
 
-    // Rental validation
+    if (!formData.location.trim()) {
+      setMessage("Please select a pickup location.");
+      return;
+    }
+
     if (isRent) {
       if (
         formData.rentalPricePerDay === "" ||
@@ -227,7 +336,6 @@ function SellProduct() {
         images: imageUrl ? [imageUrl] : [],
       };
 
-      // Add rental information only for Rent listing
       if (isRent) {
         productPayload.rentalPricePerDay = Number(formData.rentalPricePerDay);
 
@@ -294,7 +402,10 @@ function SellProduct() {
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-            {/* Main Form */}
+            {/* =====================================================
+                MAIN FORM
+            ====================================================== */}
+
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
               <div className="mb-8">
                 <h2 className="text-lg font-semibold text-slate-900">
@@ -440,6 +551,149 @@ function SellProduct() {
                   </div>
                 </div>
 
+                {/* =====================================================
+                    AI FAIR PRICE
+                ====================================================== */}
+
+                <div className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+                  <div className="p-5 sm:p-6">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                        <Sparkles size={21} />
+                      </div>
+
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900">
+                          AI Fair Price Predictor
+                        </h3>
+
+                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                          Get an estimated fair price using your product details
+                          and similar CampusMart listings.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAiFairPrice}
+                      disabled={aiLoading}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {aiLoading ?
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Analyzing Price...
+                        </>
+                      : <>
+                          <TrendingUp size={18} />
+                          Check Fair Price with AI
+                        </>
+                      }
+                    </button>
+
+                    {aiError && (
+                      <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {aiError}
+                      </div>
+                    )}
+
+                    {/* AI Result */}
+                    {aiPrediction && (
+                      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              CampusMart AI Estimate
+                            </p>
+
+                            <p className="mt-1 text-2xl font-bold text-slate-900">
+                              {formatPrice(aiPrediction.fairPrice)}
+                            </p>
+                          </div>
+
+                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                            <CircleDollarSign size={22} />
+                          </div>
+                        </div>
+
+                        {/* Price Range */}
+                        <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                          <p className="text-xs font-medium text-slate-500">
+                            Estimated Fair Range
+                          </p>
+
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {formatPrice(aiPrediction.priceRange?.min)} –{" "}
+                            {formatPrice(aiPrediction.priceRange?.max)}
+                          </p>
+                        </div>
+
+                        {/* Status */}
+                        <div className="mt-4">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${getAiStatusClasses(
+                              aiPrediction.status,
+                            )}`}
+                          >
+                            {aiPrediction.status}
+                          </span>
+                        </div>
+
+                        {/* Comparison */}
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl border border-slate-200 p-3">
+                            <p className="text-xs text-slate-500">Your Price</p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                              {formatPrice(aiPrediction.currentPrice)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 p-3">
+                            <p className="text-xs text-slate-500">
+                              Market Average
+                            </p>
+
+                            <p className="mt-1 font-semibold text-slate-900">
+                              {aiPrediction.marketAverage ?
+                                formatPrice(aiPrediction.marketAverage)
+                              : "Not enough data"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Suggestion */}
+                        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                          <div className="flex gap-3">
+                            <Sparkles
+                              size={18}
+                              className="mt-0.5 shrink-0 text-blue-600"
+                            />
+
+                            <div>
+                              <p className="text-sm font-semibold text-blue-900">
+                                AI Suggestion
+                              </p>
+
+                              <p className="mt-1 text-sm leading-6 text-blue-800">
+                                {aiPrediction.suggestion}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {aiPrediction.similarProductsCount > 0 && (
+                          <p className="mt-3 text-xs text-slate-400">
+                            Based on {aiPrediction.similarProductsCount} similar
+                            CampusMart listings.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Rental Section */}
                 {isRent && (
                   <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
@@ -460,7 +714,6 @@ function SellProduct() {
                     </div>
 
                     <div className="space-y-5">
-                      {/* Rental Price + Deposit */}
                       <div className="grid gap-5 sm:grid-cols-2">
                         <div>
                           <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -511,7 +764,6 @@ function SellProduct() {
                         </div>
                       </div>
 
-                      {/* Rental Days */}
                       <div>
                         <div className="mb-2 flex items-center gap-2">
                           <Clock3 size={17} className="text-blue-600" />
@@ -554,7 +806,6 @@ function SellProduct() {
                         </div>
                       </div>
 
-                      {/* Rental Instructions */}
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-slate-700">
                           Rental Instructions
@@ -579,7 +830,6 @@ function SellProduct() {
                 )}
 
                 {/* Location */}
-                {/* Pickup Location */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
                     Pickup Location
@@ -692,7 +942,10 @@ function SellProduct() {
               </div>
             </div>
 
-            {/* Sidebar */}
+            {/* =====================================================
+                SIDEBAR
+            ====================================================== */}
+
             <div className="space-y-5">
               {/* Preview */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -779,6 +1032,26 @@ function SellProduct() {
                 </div>
               </div>
 
+              {/* AI Sidebar */}
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                    <Sparkles size={20} />
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      AI Seller Assistant
+                    </h3>
+
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Use AI Fair Price Predictor to understand whether your
+                      product price is competitive before publishing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Rental Info */}
               {isRent && (
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
@@ -801,26 +1074,6 @@ function SellProduct() {
                   </div>
                 </div>
               )}
-
-              {/* AI */}
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-                    <Sparkles size={20} />
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-slate-900">
-                      AI Seller Assistant
-                    </h3>
-
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      AI will later help improve your listing, suggest a fair
-                      price and detect potential risks.
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {/* Safety */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
