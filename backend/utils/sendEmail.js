@@ -4,18 +4,24 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
   secure: false,
-
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
 });
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
     console.log("========== SENDING OTP EMAIL ==========");
+    console.log("SMTP Host:", process.env.SMTP_HOST);
+    console.log("SMTP Port:", process.env.SMTP_PORT);
+    console.log("SMTP User configured:", Boolean(process.env.SMTP_USER));
+    console.log("SMTP Password configured:", Boolean(process.env.SMTP_PASS));
     console.log("To:", to);
-    console.log("From configured:", Boolean(process.env.EMAIL_FROM));
+    console.log("From:", process.env.EMAIL_FROM);
 
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
@@ -33,8 +39,7 @@ const sendEmail = async ({ to, subject, html }) => {
   } catch (error) {
     console.error("========== EMAIL SEND ERROR ==========");
     console.error("Code:", error?.code);
-    console.error("Response:", error?.response);
-    console.error("Response Code:", error?.responseCode);
+    console.error("Command:", error?.command);
     console.error("Message:", error?.message);
     console.error("======================================");
 
