@@ -11,17 +11,35 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async ({
-  to,
-  subject,
-  html,
-}) => {
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
-    to,
-    subject,
-    html,
-  });
+const sendEmail = async ({ to, subject, html }) => {
+  try {
+    console.log("========== SENDING OTP EMAIL ==========");
+    console.log("To:", to);
+    console.log("From configured:", Boolean(process.env.EMAIL_FROM));
+
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("========== EMAIL SENT ==========");
+    console.log("Message ID:", info.messageId);
+    console.log("Accepted:", info.accepted);
+    console.log("Rejected:", info.rejected);
+
+    return info;
+  } catch (error) {
+    console.error("========== EMAIL SEND ERROR ==========");
+    console.error("Code:", error?.code);
+    console.error("Response:", error?.response);
+    console.error("Response Code:", error?.responseCode);
+    console.error("Message:", error?.message);
+    console.error("======================================");
+
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
