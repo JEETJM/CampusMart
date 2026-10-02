@@ -519,133 +519,336 @@ const forgotPassword = async (req, res) => {
     // ========================================================
 
     const emailHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0"
-        >
+  <title>CampusMart AI - Password Reset</title>
+</head>
 
-        <title>CampusMart Password Reset</title>
-      </head>
+<body
+  style="
+    margin:0;
+    padding:0;
+    background:#f1f5f9;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#0f172a;
+  "
+>
 
-      <body
-        style="
-          margin:0;
-          padding:0;
-          background:#f8fafc;
-          font-family:Arial,Helvetica,sans-serif;
-        "
-      >
+  <table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="background:#f1f5f9;padding:40px 15px;"
+  >
+    <tr>
+      <td align="center">
 
-        <div
+        <!-- MAIN CARD -->
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
           style="
             max-width:600px;
-            margin:40px auto;
             background:#ffffff;
+            border-radius:20px;
+            overflow:hidden;
             border:1px solid #e2e8f0;
-            border-radius:16px;
-            padding:32px;
           "
         >
 
-          <h2
-            style="
-              margin:0;
-              color:#0f172a;
-            "
-          >
-            CampusMart
-          </h2>
-
-          <p
-            style="
-              color:#475569;
-              line-height:1.6;
-            "
-          >
-            We received a request to reset your
-            CampusMart account password.
-          </p>
-
-          <div
-            style="
-              margin:28px 0;
-              padding:25px;
-              text-align:center;
-              background:#eff6ff;
-              border-radius:12px;
-            "
-          >
-
-            <p
+          <!-- HEADER -->
+          <tr>
+            <td
               style="
-                margin:0 0 10px;
-                color:#64748b;
-                font-size:14px;
+                background:#2563eb;
+                padding:30px 25px;
+                text-align:center;
               "
             >
-              Your verification code
-            </p>
 
-            <div
+              <div
+                style="
+                  display:inline-block;
+                  width:58px;
+                  height:58px;
+                  line-height:58px;
+                  background:#ffffff;
+                  border-radius:16px;
+                  color:#2563eb;
+                  font-size:25px;
+                  font-weight:bold;
+                  margin-bottom:12px;
+                "
+              >
+                CM
+              </div>
+
+              <h1
+                style="
+                  margin:0;
+                  color:#ffffff;
+                  font-size:25px;
+                  font-weight:700;
+                "
+              >
+                CampusMart AI
+              </h1>
+
+              <p
+                style="
+                  margin:8px 0 0;
+                  color:#dbeafe;
+                  font-size:14px;
+                "
+              >
+                Your Campus. Your Marketplace.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- CONTENT -->
+          <tr>
+            <td style="padding:35px 30px 30px;">
+
+              <h2
+                style="
+                  margin:0 0 12px;
+                  font-size:24px;
+                  color:#0f172a;
+                "
+              >
+                Password Reset
+              </h2>
+
+              <p
+                style="
+                  margin:0;
+                  color:#475569;
+                  font-size:15px;
+                  line-height:1.7;
+                "
+              >
+                We received a request to reset your
+                CampusMart AI account password.
+                Use the verification code below to continue.
+              </p>
+
+              <!-- OTP BOX -->
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="margin:30px 0;"
+              >
+                <tr>
+                  <td
+                    align="center"
+                    style="
+                      background:#eff6ff;
+                      border:1px solid #bfdbfe;
+                      border-radius:16px;
+                      padding:28px 20px;
+                    "
+                  >
+
+                    <p
+                      style="
+                        margin:0 0 12px;
+                        color:#64748b;
+                        font-size:13px;
+                        font-weight:600;
+                        text-transform:uppercase;
+                        letter-spacing:1px;
+                      "
+                    >
+                      Your Verification Code
+                    </p>
+
+                    <div
+                      style="
+                        font-size:38px;
+                        line-height:1.2;
+                        font-weight:700;
+                        letter-spacing:9px;
+                        color:#2563eb;
+                      "
+                    >
+                      ${otp}
+                    </div>
+
+                    <p
+                      style="
+                        margin:15px 0 0;
+                        color:#64748b;
+                        font-size:13px;
+                      "
+                    >
+                      Enter this 6-digit code in CampusMart AI.
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+              <!-- EXPIRY -->
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="
+                  background:#f8fafc;
+                  border-radius:12px;
+                  margin-bottom:24px;
+                "
+              >
+                <tr>
+                  <td style="padding:15px 18px;">
+
+                    <p
+                      style="
+                        margin:0;
+                        color:#334155;
+                        font-size:14px;
+                        line-height:1.6;
+                      "
+                    >
+                      <strong>⏱ Valid for 10 minutes</strong>
+                      <br />
+                      For your security, this verification code
+                      will expire after 10 minutes.
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+              <!-- SECURITY WARNING -->
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="
+                  background:#fff7ed;
+                  border:1px solid #fed7aa;
+                  border-radius:12px;
+                  margin-bottom:25px;
+                "
+              >
+                <tr>
+                  <td style="padding:16px 18px;">
+
+                    <p
+                      style="
+                        margin:0 0 5px;
+                        color:#9a3412;
+                        font-size:14px;
+                        font-weight:700;
+                      "
+                    >
+                      Security Notice
+                    </p>
+
+                    <p
+                      style="
+                        margin:0;
+                        color:#9a3412;
+                        font-size:13px;
+                        line-height:1.6;
+                      "
+                    >
+                      Never share this OTP with anyone.
+                      CampusMart AI will never ask you to
+                      share your verification code.
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+              <p
+                style="
+                  margin:0;
+                  color:#64748b;
+                  font-size:13px;
+                  line-height:1.7;
+                "
+              >
+                If you did not request a password reset,
+                you can safely ignore this email.
+                Your account remains secure.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td
               style="
-                font-size:34px;
-                font-weight:bold;
-                letter-spacing:8px;
-                color:#2563eb;
+                border-top:1px solid #e2e8f0;
+                padding:22px 25px;
+                text-align:center;
+                background:#f8fafc;
               "
             >
-              ${otp}
-            </div>
-          </div>
 
-          <p
-            style="
-              color:#475569;
-              line-height:1.6;
-            "
-          >
-            This OTP is valid for
-            <strong>10 minutes</strong>.
-          </p>
+              <p
+                style="
+                  margin:0 0 6px;
+                  color:#475569;
+                  font-size:13px;
+                  font-weight:600;
+                "
+              >
+                CampusMart AI
+              </p>
 
-          <p
-            style="
-              color:#64748b;
-              font-size:13px;
-              line-height:1.6;
-            "
-          >
-            If you did not request a password reset,
-            you can safely ignore this email.
-          </p>
+              <p
+                style="
+                  margin:0;
+                  color:#94a3b8;
+                  font-size:12px;
+                "
+              >
+                Student-to-Student Campus Marketplace
+              </p>
 
-          <hr
-            style="
-              border:none;
-              border-top:1px solid #e2e8f0;
-              margin:28px 0;
-            "
-          >
+              <p
+                style="
+                  margin:10px 0 0;
+                  color:#cbd5e1;
+                  font-size:11px;
+                "
+              >
+                © 2026 CampusMart AI. All rights reserved.
+              </p>
 
-          <p
-            style="
-              margin:0;
-              color:#94a3b8;
-              font-size:12px;
-            "
-          >
-            CampusMart Student Marketplace
-          </p>
+            </td>
+          </tr>
 
-        </div>
-      </body>
-      </html>
-    `;
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
 
     await sendEmail({
       to: normalizedEmail,
