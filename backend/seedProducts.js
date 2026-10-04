@@ -914,7 +914,7 @@ const productCatalog = [
    CONFIG
 ========================================================= */
 
-const TARGET_PRODUCTS = 1200;
+const TARGET_PRODUCTS = 500;
 
 const conditions = ["New", "Like New", "Good", "Fair"];
 
