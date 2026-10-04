@@ -247,7 +247,7 @@ function Home() {
                 </div>
 
                 <div>
-                  <p className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
+                  {/* <p className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
                     Campus
                     <span className="text-blue-600 dark:text-blue-400">
                       Mart
@@ -255,27 +255,28 @@ function Home() {
                     <span className="ml-2 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-black text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
                       AI
                     </span>
-                  </p>
+                  </p> */}
 
-                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                  <p className="mt-1 font-mono text-[20px] font-bold uppercase tracking-[0.2em] text-slate-500/90 dark:text-slate-400/80">
                     Student Marketplace
                   </p>
                 </div>
               </div>
+              <br />
 
               {/* Eyebrow */}
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3.5 py-2 text-xs font-bold text-blue-700 shadow-sm dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300">
-                <Sparkles size={14} />
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3.5 py-2 text-sm font-mono font-bold tracking-tight text-blue-700 shadow-sm dark:border-blue-500/15 dark:bg-blue-500/10 dark:text-blue-300">
+                <Sparkles size={20} />
                 Buy smarter with CampusMart AI
               </div>
 
               {/* Heading */}
-              <h1 className="max-w-3xl text-[3.35rem] font-black leading-[0.98] tracking-[-0.055em] text-slate-950 dark:text-white sm:text-6xl lg:text-[68px]">
+              <h1 className="max-w-3xl text-[3.35rem] font-black leading-[0.98] tracking-[-0.055em] text-slate-450 dark:text-white sm:text-6xl lg:text-[60px]">
                 Buy.
-                <span className="text-blue-600 dark:text-blue-400"> Sell.</span>
+                <span className="text-blue-400 dark:text-blue-400"> Sell.</span>
                 <br />
                 Exchange.
-                <span className="text-blue-600 dark:text-blue-400"> Rent.</span>
+                <span className="text-blue-400 dark:text-blue-400"> Rent.</span>
               </h1>
 
               {/* Description */}

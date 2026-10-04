@@ -343,9 +343,9 @@ function Navbar() {
             onClick={() => setIsMenuOpen(false)}
           >
             <img
-              src="/image1.png"
+              src="/image2.png"
               alt="CampusMart Logo"
-              className="h-[60px] w-auto max-w-[220px] object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+              className="h-[73px] w-auto max-w-[250px] object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             />
           </Link>
 
@@ -354,9 +354,9 @@ function Navbar() {
           ================================================== */}
 
           <nav className="hidden shrink-0 items-center gap-5 xl:flex">
-            <NavLink to="/" className={navLinkClass}>
+            {/* <NavLink to="/" className={navLinkClass}>
               Home
-            </NavLink>
+            </NavLink> */}
 
             <NavLink to="/marketplace" className={navLinkClass}>
               Marketplace
