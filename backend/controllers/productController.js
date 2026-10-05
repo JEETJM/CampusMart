@@ -1,11 +1,9 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 
-/*
-|--------------------------------------------------------------------------
-| Create Product
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// CREATE PRODUCT
+// ============================================================
 
 const createProduct = async (req, res) => {
   try {
@@ -27,9 +25,9 @@ const createProduct = async (req, res) => {
       rentalInstructions,
     } = req.body || {};
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // AUTHENTICATION
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (!req.user || !req.user._id) {
       return res.status(401).json({
@@ -38,9 +36,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // REQUIRED FIELDS
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (
       !title ||
@@ -55,9 +53,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PRICE
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const numericPrice = Number(price);
 
@@ -68,9 +66,9 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // LOCATION COORDINATES
-    // ----------------------------------------------------------
+    // ==========================================================
 
     let parsedCoordinates = null;
 
@@ -87,7 +85,6 @@ const createProduct = async (req, res) => {
           parsedCoordinates.lng !== undefined
         ) {
           const lat = Number(parsedCoordinates.lat);
-
           const lng = Number(parsedCoordinates.lng);
 
           if (
@@ -113,9 +110,9 @@ const createProduct = async (req, res) => {
       }
     }
 
-    // ----------------------------------------------------------
-    // CREATE
-    // ----------------------------------------------------------
+    // ==========================================================
+    // CREATE PRODUCT
+    // ==========================================================
 
     const product = await Product.create({
       title: String(title).trim(),
@@ -136,6 +133,8 @@ const createProduct = async (req, res) => {
 
       locationCoordinates: parsedCoordinates,
 
+      // IMPORTANT
+      // Product belongs to currently logged-in seller
       seller: req.user._id,
 
       college: college || req.user.college || "Narula Institute of Technology",
@@ -154,9 +153,9 @@ const createProduct = async (req, res) => {
         rentalInstructions ? String(rentalInstructions).trim() : "",
     });
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // POPULATE SELLER
-    // ----------------------------------------------------------
+    // ==========================================================
 
     await product.populate(
       "seller",
@@ -178,11 +177,9 @@ const createProduct = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get All Products
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// GET ALL PRODUCTS
+// ============================================================
 
 const getProducts = async (req, res) => {
   try {
@@ -204,13 +201,17 @@ const getProducts = async (req, res) => {
 
     const skip = (currentPage - 1) * currentLimit;
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // FILTER
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const filter = {
       isAvailable: true,
     };
+
+    // ==========================================================
+    // SEARCH
+    // ==========================================================
 
     const cleanSearch = String(search || "").trim();
 
@@ -231,21 +232,33 @@ const getProducts = async (req, res) => {
       ];
     }
 
+    // ==========================================================
+    // CATEGORY
+    // ==========================================================
+
     if (category) {
       filter.category = category;
     }
+
+    // ==========================================================
+    // CONDITION
+    // ==========================================================
 
     if (condition) {
       filter.condition = condition;
     }
 
+    // ==========================================================
+    // LISTING TYPE
+    // ==========================================================
+
     if (listingType) {
       filter.listingType = listingType;
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PRICE FILTER
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const minimumPrice = Number(minPrice);
 
@@ -273,9 +286,9 @@ const getProducts = async (req, res) => {
       };
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // SORT
-    // ----------------------------------------------------------
+    // ==========================================================
 
     let sortOption = {
       createdAt: -1,
@@ -312,9 +325,9 @@ const getProducts = async (req, res) => {
       };
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // FETCH
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const [products, totalProducts] = await Promise.all([
       Product.find(filter)
@@ -330,6 +343,7 @@ const getProducts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+
       products,
 
       pagination: {
@@ -337,7 +351,9 @@ const getProducts = async (req, res) => {
         totalPages,
         totalProducts,
         limit: currentLimit,
+
         hasNextPage: currentPage < totalPages,
+
         hasPreviousPage: currentPage > 1,
       },
     });
@@ -351,15 +367,17 @@ const getProducts = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Single Product
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// GET SINGLE PRODUCT
+// ============================================================
 
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // ==========================================================
+    // VALIDATE ID
+    // ==========================================================
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -367,6 +385,10 @@ const getProductById = async (req, res) => {
         message: "Invalid product ID.",
       });
     }
+
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
 
     const product = await Product.findById(id).populate(
       "seller",
@@ -380,7 +402,10 @@ const getProductById = async (req, res) => {
       });
     }
 
-    // Increase views
+    // ==========================================================
+    // INCREASE VIEWS
+    // ==========================================================
+
     product.views = (product.views || 0) + 1;
 
     await product.save();
@@ -399,20 +424,26 @@ const getProductById = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get My Products
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// GET MY PRODUCTS
+// ============================================================
 
 const getMyProducts = async (req, res) => {
   try {
+    // ==========================================================
+    // AUTHENTICATION
+    // ==========================================================
+
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
         message: "Authentication required.",
       });
     }
+
+    // ==========================================================
+    // FIND OWN PRODUCTS
+    // ==========================================================
 
     const products = await Product.find({
       seller: req.user._id,
@@ -436,15 +467,17 @@ const getMyProducts = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| Delete Product - Seller
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// SELLER UPDATE OWN PRODUCT
+// ============================================================
 
-const deleteProduct = async (req, res) => {
+const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // ==========================================================
+    // AUTHENTICATION
+    // ==========================================================
 
     if (!req.user || !req.user._id) {
       return res.status(401).json({
@@ -452,6 +485,21 @@ const deleteProduct = async (req, res) => {
         message: "Authentication required.",
       });
     }
+
+    // ==========================================================
+    // VALIDATE PRODUCT ID
+    // ==========================================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
 
     const product = await Product.findById(id);
 
@@ -462,12 +510,339 @@ const deleteProduct = async (req, res) => {
       });
     }
 
+    // ==========================================================
+    // OWNERSHIP CHECK
+    // ==========================================================
+
+    if (product.seller.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You can update only your own product.",
+      });
+    }
+
+    // ==========================================================
+    // GET BODY
+    // ==========================================================
+
+    const {
+      title,
+      description,
+      category,
+      price,
+      condition,
+      listingType,
+      images,
+      location,
+      locationCoordinates,
+      college,
+      rentalPricePerDay,
+      rentalDeposit,
+      minimumRentalDays,
+      maximumRentalDays,
+      rentalInstructions,
+    } = req.body || {};
+
+    // ==========================================================
+    // TITLE
+    // ==========================================================
+
+    if (title !== undefined) {
+      product.title = String(title).trim();
+    }
+
+    // ==========================================================
+    // DESCRIPTION
+    // ==========================================================
+
+    if (description !== undefined) {
+      product.description = String(description).trim();
+    }
+
+    // ==========================================================
+    // CATEGORY
+    // ==========================================================
+
+    if (category !== undefined) {
+      product.category = category;
+    }
+
+    // ==========================================================
+    // PRICE
+    // ==========================================================
+
+    if (price !== undefined) {
+      const numericPrice = Number(price);
+
+      if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid product price.",
+        });
+      }
+
+      product.price = numericPrice;
+    }
+
+    // ==========================================================
+    // CONDITION
+    // ==========================================================
+
+    if (condition !== undefined) {
+      product.condition = condition;
+    }
+
+    // ==========================================================
+    // LISTING TYPE
+    // ==========================================================
+
+    if (listingType !== undefined) {
+      product.listingType = listingType;
+    }
+
+    // ==========================================================
+    // IMAGES
+    // ==========================================================
+
+    if (images !== undefined) {
+      if (!Array.isArray(images)) {
+        return res.status(400).json({
+          success: false,
+          message: "Images must be an array.",
+        });
+      }
+
+      product.images = images;
+    }
+
+    // ==========================================================
+    // LOCATION
+    // ==========================================================
+
+    if (location !== undefined) {
+      product.location = String(location).trim();
+    }
+
+    // ==========================================================
+    // LOCATION COORDINATES
+    // ==========================================================
+
+    if (locationCoordinates !== undefined) {
+      let parsedCoordinates;
+
+      try {
+        parsedCoordinates =
+          typeof locationCoordinates === "string" ?
+            JSON.parse(locationCoordinates)
+          : locationCoordinates;
+
+        if (
+          parsedCoordinates &&
+          parsedCoordinates.lat !== undefined &&
+          parsedCoordinates.lng !== undefined
+        ) {
+          const lat = Number(parsedCoordinates.lat);
+
+          const lng = Number(parsedCoordinates.lng);
+
+          if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            lat >= -90 &&
+            lat <= 90 &&
+            lng >= -180 &&
+            lng <= 180
+          ) {
+            product.locationCoordinates = {
+              lat,
+              lng,
+            };
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: "Invalid location coordinates.",
+            });
+          }
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid location coordinates.",
+        });
+      }
+    }
+
+    // ==========================================================
+    // COLLEGE
+    // ==========================================================
+
+    if (college !== undefined) {
+      product.college = String(college).trim();
+    }
+
+    // ==========================================================
+    // RENTAL PRICE
+    // ==========================================================
+
+    if (rentalPricePerDay !== undefined) {
+      const value = Number(rentalPricePerDay);
+
+      if (!Number.isFinite(value) || value < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid rental price.",
+        });
+      }
+
+      product.rentalPricePerDay = value;
+    }
+
+    // ==========================================================
+    // RENTAL DEPOSIT
+    // ==========================================================
+
+    if (rentalDeposit !== undefined) {
+      const value = Number(rentalDeposit);
+
+      if (!Number.isFinite(value) || value < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid rental deposit.",
+        });
+      }
+
+      product.rentalDeposit = value;
+    }
+
+    // ==========================================================
+    // MINIMUM RENTAL DAYS
+    // ==========================================================
+
+    if (minimumRentalDays !== undefined) {
+      const value = Number(minimumRentalDays);
+
+      if (!Number.isInteger(value) || value < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid minimum rental days.",
+        });
+      }
+
+      product.minimumRentalDays = value;
+    }
+
+    // ==========================================================
+    // MAXIMUM RENTAL DAYS
+    // ==========================================================
+
+    if (maximumRentalDays !== undefined) {
+      const value = Number(maximumRentalDays);
+
+      if (!Number.isInteger(value) || value < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid maximum rental days.",
+        });
+      }
+
+      product.maximumRentalDays = value;
+    }
+
+    // ==========================================================
+    // RENTAL INSTRUCTIONS
+    // ==========================================================
+
+    if (rentalInstructions !== undefined) {
+      product.rentalInstructions = String(rentalInstructions).trim();
+    }
+
+    // ==========================================================
+    // SAVE
+    // ==========================================================
+
+    await product.save();
+
+    // ==========================================================
+    // POPULATE SELLER
+    // ==========================================================
+
+    await product.populate(
+      "seller",
+      "name email studentId college isVerified isActive",
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Product updated successfully.",
+      product,
+    });
+  } catch (error) {
+    console.error("Update Product Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update product.",
+    });
+  }
+};
+
+// ============================================================
+// SELLER DELETE OWN PRODUCT
+// ============================================================
+
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ==========================================================
+    // AUTHENTICATION
+    // ==========================================================
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
+
+    // ==========================================================
+    // VALIDATE ID
+    // ==========================================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    // ==========================================================
+    // OWNERSHIP CHECK
+    // ==========================================================
+
     if (product.seller.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this product.",
       });
     }
+
+    // ==========================================================
+    // DELETE
+    // ==========================================================
 
     await Product.findByIdAndDelete(id);
 
@@ -485,11 +860,9 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN - GET ALL PRODUCTS
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// ADMIN - GET ALL PRODUCTS
+// ============================================================
 
 const adminGetProducts = async (req, res) => {
   try {
@@ -511,9 +884,9 @@ const adminGetProducts = async (req, res) => {
 
     const filter = {};
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // SEARCH
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const cleanSearch = String(search || "").trim();
 
@@ -540,25 +913,25 @@ const adminGetProducts = async (req, res) => {
       ];
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // CATEGORY
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (category) {
       filter.category = category;
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // LISTING TYPE
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (listingType) {
       filter.listingType = listingType;
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // STATUS
-    // ----------------------------------------------------------
+    // ==========================================================
 
     if (status === "available") {
       filter.isAvailable = true;
@@ -568,9 +941,9 @@ const adminGetProducts = async (req, res) => {
       filter.isAvailable = false;
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // SORT
-    // ----------------------------------------------------------
+    // ==========================================================
 
     let sortOption = {
       createdAt: -1,
@@ -607,9 +980,9 @@ const adminGetProducts = async (req, res) => {
       };
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // FETCH
-    // ----------------------------------------------------------
+    // ==========================================================
 
     const [products, totalProducts] = await Promise.all([
       Product.find(filter)
@@ -626,6 +999,7 @@ const adminGetProducts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+
       products,
 
       pagination: {
@@ -633,7 +1007,9 @@ const adminGetProducts = async (req, res) => {
         totalPages,
         totalProducts,
         limit: currentLimit,
+
         hasNextPage: currentPage < totalPages,
+
         hasPreviousPage: currentPage > 1,
       },
     });
@@ -647,17 +1023,17 @@ const adminGetProducts = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN - UPDATE PRODUCT AVAILABILITY
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// ADMIN - UPDATE ANY PRODUCT
+// ============================================================
 
-const adminUpdateProductAvailability = async (req, res) => {
+const adminUpdateProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { isAvailable } = req.body || {};
+    // ==========================================================
+    // VALIDATE PRODUCT ID
+    // ==========================================================
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -666,12 +1042,9 @@ const adminUpdateProductAvailability = async (req, res) => {
       });
     }
 
-    if (typeof isAvailable !== "boolean") {
-      return res.status(400).json({
-        success: false,
-        message: "isAvailable must be true or false.",
-      });
-    }
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
 
     const product = await Product.findById(id);
 
@@ -682,12 +1055,302 @@ const adminUpdateProductAvailability = async (req, res) => {
       });
     }
 
+    // ==========================================================
+    // REQUEST BODY
+    // ==========================================================
+
+    const {
+      title,
+      description,
+      category,
+      price,
+      condition,
+      listingType,
+      images,
+      location,
+      locationCoordinates,
+      college,
+      isAvailable,
+      rentalPricePerDay,
+      rentalDeposit,
+      minimumRentalDays,
+      maximumRentalDays,
+      rentalInstructions,
+    } = req.body || {};
+
+    // ==========================================================
+    // TITLE
+    // ==========================================================
+
+    if (title !== undefined) {
+      product.title = String(title).trim();
+    }
+
+    // ==========================================================
+    // DESCRIPTION
+    // ==========================================================
+
+    if (description !== undefined) {
+      product.description = String(description).trim();
+    }
+
+    // ==========================================================
+    // CATEGORY
+    // ==========================================================
+
+    if (category !== undefined) {
+      product.category = category;
+    }
+
+    // ==========================================================
+    // PRICE
+    // ==========================================================
+
+    if (price !== undefined) {
+      const numericPrice = Number(price);
+
+      if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid product price.",
+        });
+      }
+
+      product.price = numericPrice;
+    }
+
+    // ==========================================================
+    // CONDITION
+    // ==========================================================
+
+    if (condition !== undefined) {
+      product.condition = condition;
+    }
+
+    // ==========================================================
+    // LISTING TYPE
+    // ==========================================================
+
+    if (listingType !== undefined) {
+      product.listingType = listingType;
+    }
+
+    // ==========================================================
+    // IMAGES
+    // ==========================================================
+
+    if (images !== undefined) {
+      if (!Array.isArray(images)) {
+        return res.status(400).json({
+          success: false,
+          message: "Images must be an array.",
+        });
+      }
+
+      product.images = images;
+    }
+
+    // ==========================================================
+    // LOCATION
+    // ==========================================================
+
+    if (location !== undefined) {
+      product.location = String(location).trim();
+    }
+
+    // ==========================================================
+    // LOCATION COORDINATES
+    // ==========================================================
+
+    if (locationCoordinates !== undefined) {
+      product.locationCoordinates = locationCoordinates;
+    }
+
+    // ==========================================================
+    // COLLEGE
+    // ==========================================================
+
+    if (college !== undefined) {
+      product.college = String(college).trim();
+    }
+
+    // ==========================================================
+    // AVAILABILITY
+    // ==========================================================
+
+    if (isAvailable !== undefined) {
+      if (typeof isAvailable !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          message: "isAvailable must be true or false.",
+        });
+      }
+
+      product.isAvailable = isAvailable;
+    }
+
+    // ==========================================================
+    // RENTAL PRICE
+    // ==========================================================
+
+    if (rentalPricePerDay !== undefined) {
+      const value = Number(rentalPricePerDay);
+
+      if (!Number.isFinite(value) || value < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid rental price.",
+        });
+      }
+
+      product.rentalPricePerDay = value;
+    }
+
+    // ==========================================================
+    // RENTAL DEPOSIT
+    // ==========================================================
+
+    if (rentalDeposit !== undefined) {
+      const value = Number(rentalDeposit);
+
+      if (!Number.isFinite(value) || value < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid rental deposit.",
+        });
+      }
+
+      product.rentalDeposit = value;
+    }
+
+    // ==========================================================
+    // MINIMUM RENTAL DAYS
+    // ==========================================================
+
+    if (minimumRentalDays !== undefined) {
+      const value = Number(minimumRentalDays);
+
+      if (!Number.isInteger(value) || value < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid minimum rental days.",
+        });
+      }
+
+      product.minimumRentalDays = value;
+    }
+
+    // ==========================================================
+    // MAXIMUM RENTAL DAYS
+    // ==========================================================
+
+    if (maximumRentalDays !== undefined) {
+      const value = Number(maximumRentalDays);
+
+      if (!Number.isInteger(value) || value < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid maximum rental days.",
+        });
+      }
+
+      product.maximumRentalDays = value;
+    }
+
+    // ==========================================================
+    // RENTAL INSTRUCTIONS
+    // ==========================================================
+
+    if (rentalInstructions !== undefined) {
+      product.rentalInstructions = String(rentalInstructions).trim();
+    }
+
+    // ==========================================================
+    // SAVE
+    // ==========================================================
+
+    await product.save();
+
+    // ==========================================================
+    // POPULATE SELLER
+    // ==========================================================
+
+    await product.populate(
+      "seller",
+      "name email studentId college isVerified isActive",
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Product updated successfully by admin.",
+      product,
+    });
+  } catch (error) {
+    console.error("Admin Update Product Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update product.",
+    });
+  }
+};
+
+// ============================================================
+// ADMIN - UPDATE PRODUCT AVAILABILITY
+// ============================================================
+
+const adminUpdateProductAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { isAvailable } = req.body || {};
+
+    // ==========================================================
+    // VALIDATE ID
+    // ==========================================================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+    }
+
+    // ==========================================================
+    // VALIDATE BOOLEAN
+    // ==========================================================
+
+    if (typeof isAvailable !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isAvailable must be true or false.",
+      });
+    }
+
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    // ==========================================================
+    // UPDATE
+    // ==========================================================
+
     product.isAvailable = isAvailable;
 
     await product.save();
 
     return res.status(200).json({
       success: true,
+
       message:
         isAvailable ?
           "Product activated successfully."
@@ -709,15 +1372,17 @@ const adminUpdateProductAvailability = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN - DELETE PRODUCT
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// ADMIN - DELETE PRODUCT
+// ============================================================
 
 const adminDeleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // ==========================================================
+    // VALIDATE ID
+    // ==========================================================
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -725,6 +1390,10 @@ const adminDeleteProduct = async (req, res) => {
         message: "Invalid product ID.",
       });
     }
+
+    // ==========================================================
+    // FIND PRODUCT
+    // ==========================================================
 
     const product = await Product.findById(id);
 
@@ -734,6 +1403,10 @@ const adminDeleteProduct = async (req, res) => {
         message: "Product not found.",
       });
     }
+
+    // ==========================================================
+    // DELETE
+    // ==========================================================
 
     await Product.findByIdAndDelete(id);
 
@@ -751,21 +1424,24 @@ const adminDeleteProduct = async (req, res) => {
   }
 };
 
-/*
-|--------------------------------------------------------------------------
-| EXPORTS
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// EXPORTS
+// ============================================================
 
 module.exports = {
+  // Seller / Public
   createProduct,
   getProducts,
   getProductById,
   getMyProducts,
+
+  // Seller
+  updateProduct,
   deleteProduct,
 
   // Admin
   adminGetProducts,
+  adminUpdateProduct,
   adminUpdateProductAvailability,
   adminDeleteProduct,
 };
