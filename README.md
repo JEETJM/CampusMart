@@ -363,9 +363,9 @@ Update the table with the real names, roles, photos, and profile links of your g
 | Team Member | Role | Profile |
 |---|---|---|
 | **Jeet Mondal** | Team Leader · Full Stack Developer | [GitHub](https://github.com/JEETJM) |
-| Team Member 2 | Frontend Developer | Add profile link |
-| Team Member 3 | Backend Developer | Add profile link |
-| Team Member 4 | AI/ML & Testing | Add profile link |
+| **Annesha Mondal** | Frontend Developer | Add profile link |
+| **Subarna Mondal** | Backend Developer | Add profile link |
+| **Imran Sk** | AI/ML & Testing | Add profile link |
 
 For the About page, place approved team photos in `frontend/public/images/team/` and update their paths in `frontend/src/pages/About.jsx`.
 
