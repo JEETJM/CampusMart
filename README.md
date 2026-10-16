@@ -21,6 +21,7 @@ Buy · Sell · Rent · Exchange — all in one campus-focused platform.
 </div>
 
 ---
+<img width="1312" height="737" alt="image" src="https://github.com/user-attachments/assets/46ba0af2-38b0-4eda-9c23-fd9e22ff30ff" />
 
 ## 🌟 About the Project
 
@@ -175,9 +176,12 @@ Students can explore listings and use marketplace workflows to buy, sell, rent, 
 
 ## 🖼️ Screenshots
 
-Add real screenshots of the current application here to make the repository more informative.
 
 Recommended structure:
+
+<img width="1312" height="737" alt="image" src="https://github.com/user-attachments/assets/875ece85-47e9-45b0-9dfd-09823a7c5694" />
+
+
 
 ```text
 CampusMart/
