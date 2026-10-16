@@ -111,6 +111,16 @@ function ProductDetails() {
   const [rentalAvailability, setRentalAvailability] = useState(null);
 
   /* =========================================================
+     AI BUY VS RENT ADVISOR
+  ========================================================= */
+
+  const [buyRentRate, setBuyRentRate] = useState("");
+  const [buyRentDays, setBuyRentDays] = useState("7");
+  const [buyRentLoading, setBuyRentLoading] = useState(false);
+  const [buyRentError, setBuyRentError] = useState("");
+  const [buyRentResult, setBuyRentResult] = useState(null);
+
+  /* =========================================================
      THEME
   ========================================================= */
 
@@ -615,6 +625,73 @@ function ProductDetails() {
       );
     } finally {
       setRentalLoading(false);
+    }
+  };
+
+  /* =========================================================
+     RUN AI BUY VS RENT ADVISOR
+  ========================================================= */
+
+  const handleBuyRentAdvice = async (event) => {
+    event.preventDefault();
+
+    const token = localStorage.getItem("campusmart_token");
+
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: `/product/${id}`,
+        },
+      });
+      return;
+    }
+
+    const buyPrice = Number(product?.price);
+    const rentPerDay = Number(buyRentRate);
+    const durationDays = Number(buyRentDays);
+
+    if (!Number.isFinite(buyPrice) || buyPrice <= 0) {
+      setBuyRentError("This product does not have a valid purchase price.");
+      return;
+    }
+
+    if (!Number.isFinite(rentPerDay) || rentPerDay <= 0) {
+      setBuyRentError("Enter a valid daily rental price.");
+      return;
+    }
+
+    if (!Number.isInteger(durationDays) || durationDays <= 0) {
+      setBuyRentError("Enter a valid number of days (at least 1).");
+      return;
+    }
+
+    try {
+      setBuyRentLoading(true);
+      setBuyRentError("");
+      setBuyRentResult(null);
+
+      const response = await api.post("/ai/buy-vs-rent", {
+        buyPrice,
+        rentPerDay,
+        durationDays,
+      });
+
+      if (!response.data?.success) {
+        setBuyRentError(
+          response.data?.message || "Unable to calculate buy vs rent advice.",
+        );
+        return;
+      }
+
+      setBuyRentResult(response.data);
+    } catch (error) {
+      console.error("AI Buy vs Rent Error:", error);
+      setBuyRentError(
+        error.response?.data?.message ||
+          "Unable to calculate advice. Please sign in again if your session expired.",
+      );
+    } finally {
+      setBuyRentLoading(false);
     }
   };
 
@@ -1283,6 +1360,168 @@ function ProductDetails() {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* =================================================
+            AI BUY VS RENT ADVISOR
+        ================================================== */}
+
+        <section className="mt-8 rounded-3xl border border-indigo-100 bg-white p-6 shadow-sm dark:border-indigo-500/20 dark:bg-slate-900 md:p-8">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+              <Sparkles
+                size={21}
+                className="text-indigo-600 dark:text-indigo-400"
+              />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-slate-950 dark:text-white">
+                AI Buy vs Rent Advisor
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Compare this product's purchase price with its rental cost for
+                the time you need it. Enter the estimated daily rental price.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+              Purchase price
+            </p>
+            <p className="mt-1 text-2xl font-black text-slate-950 dark:text-white">
+              ₹{Number(product.price || 0).toLocaleString("en-IN")}
+            </p>
+          </div>
+
+          <form onSubmit={handleBuyRentAdvice} className="mt-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="buy-rent-daily-rate"
+                  className="mb-2 block text-sm font-bold text-slate-700 dark:text-slate-300"
+                >
+                  Estimated rental price per day (₹)
+                </label>
+                <input
+                  id="buy-rent-daily-rate"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  required
+                  value={buyRentRate}
+                  onChange={(event) => {
+                    setBuyRentRate(event.target.value);
+                    setBuyRentError("");
+                    setBuyRentResult(null);
+                  }}
+                  placeholder="e.g. 100"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="buy-rent-duration"
+                  className="mb-2 block text-sm font-bold text-slate-700 dark:text-slate-300"
+                >
+                  How many days do you need it?
+                </label>
+                <input
+                  id="buy-rent-duration"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={buyRentDays}
+                  onChange={(event) => {
+                    setBuyRentDays(event.target.value);
+                    setBuyRentError("");
+                    setBuyRentResult(null);
+                  }}
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {buyRentError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+                {buyRentError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={buyRentLoading}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              {buyRentLoading ?
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Comparing costs...
+                </>
+              : <>
+                  <Sparkles size={17} />
+                  Compare Buy vs Rent
+                </>
+              }
+            </button>
+          </form>
+
+          {buyRentResult && (
+            <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+              <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+                Recommendation
+              </p>
+              <h3 className="mt-1 text-2xl font-black text-slate-950 dark:text-white">
+                {buyRentResult.recommendation === "BUY" ?
+                  "Buying may be cheaper"
+                : buyRentResult.recommendation === "RENT" ?
+                  "Renting may be cheaper"
+                : "Both options cost the same"}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {buyRentResult.explanation}
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-white p-4 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Estimated cost to buy
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+                    ₹
+                    {Number(
+                      buyRentResult.comparison?.totalBuyCost || 0,
+                    ).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-white p-4 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Estimated cost to rent
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+                    ₹
+                    {Number(
+                      buyRentResult.comparison?.totalRentCost || 0,
+                    ).toLocaleString("en-IN")}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Cost difference: ₹
+                {Number(
+                  buyRentResult.comparison?.costDifference || 0,
+                ).toLocaleString("en-IN")}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                {buyRentResult.note ||
+                  "This is an estimate. Consider resale value, condition, deposit rules and other costs before deciding."}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* =================================================

@@ -162,11 +162,47 @@ const toneClasses = {
     "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
 };
 
+const getStoredUser = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const adminToken = localStorage.getItem("campusmart_admin_token");
+  const studentToken = localStorage.getItem("campusmart_token");
+
+  const adminUserRaw = localStorage.getItem("campusmart_admin_user");
+  const studentUserRaw = localStorage.getItem("campusmart_user");
+
+  let adminUser = null;
+  let studentUser = null;
+
+  try {
+    adminUser = adminUserRaw ? JSON.parse(adminUserRaw) : null;
+  } catch {
+    adminUser = null;
+  }
+
+  try {
+    studentUser = studentUserRaw ? JSON.parse(studentUserRaw) : null;
+  } catch {
+    studentUser = null;
+  }
+
+  const isAdmin =
+    Boolean(adminToken) &&
+    String(adminUser?.role || "").toLowerCase() === "admin";
+
+  return isAdmin ? adminUser : studentUser;
+};
+
 // ============================================================
 // HERO VISUAL
 // ============================================================
 
-function StudentIllustration() {
+function StudentIllustration({ currentUser }) {
+  const displayName = currentUser?.name || currentUser?.fullName || "Student";
+  const userInitial = displayName.charAt(0).toUpperCase();
+
   return (
     <div className="group relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-blue-50 via-white to-indigo-50 shadow-[0_30px_80px_rgba(37,99,235,0.14)] dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 dark:shadow-black/30">
       {/* Glow */}
@@ -183,6 +219,29 @@ function StudentIllustration() {
         <span className="h-2 w-2 rounded-full bg-emerald-500" />
         Student-first marketplace
       </div>
+
+      {currentUser && (
+        <div className="absolute right-5 top-5 z-20 flex items-center gap-3 rounded-2xl border border-white/80 bg-white/90 p-2.5 shadow-xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/90">
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-blue-600 text-sm font-black text-white ring-2 ring-white dark:ring-slate-900">
+            {currentUser.profileImage ?
+              <img
+                src={currentUser.profileImage}
+                alt={displayName}
+                className="h-full w-full object-cover"
+              />
+            : userInitial}
+          </div>
+
+          <div className="min-w-0 pr-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+              Welcome back
+            </p>
+            <p className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+              {displayName}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Bottom card */}
       <div className="absolute bottom-5 left-5 right-5 z-20 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/90">
@@ -211,6 +270,8 @@ function StudentIllustration() {
 // ============================================================
 
 function Home() {
+  const currentUser = getStoredUser();
+
   return (
     <main className="overflow-hidden bg-[#f7faff] text-slate-900 dark:bg-[#070b14] dark:text-slate-100">
       {/* =====================================================
@@ -399,7 +460,7 @@ function Home() {
                 RIGHT
             ================================================== */}
 
-            <StudentIllustration />
+            <StudentIllustration currentUser={currentUser} />
           </div>
         </div>
       </section>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
+// import { Link } from "react-router-dom";
 import {
   Bell,
   CalendarDays,
@@ -361,6 +361,9 @@ function Navbar() {
             <NavLink to="/marketplace" className={navLinkClass}>
               Marketplace
             </NavLink>
+            <Link to="/about" className="transition hover:text-cyan-600">
+              <b> About Us</b>
+            </Link>
 
             {/* =================================================
                 ADMIN
@@ -953,6 +956,14 @@ function Navbar() {
 
               <NavLink to="/marketplace" className={mobileLinkClass}>
                 Marketplace
+              </NavLink>
+
+              <NavLink
+                to="/about"
+                onClick={() => setIsMenuOpen(false)}
+                className={mobileLinkClass}
+              >
+                About Us
               </NavLink>
 
               {/* =================================================

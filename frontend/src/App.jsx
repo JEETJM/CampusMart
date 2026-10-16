@@ -29,6 +29,8 @@ import MyRentals from "./pages/MyRentals";
 import RentalRequests from "./pages/RentalRequests";
 import MyExchangeOffers from "./pages/MyExchangeOffers";
 import ExchangeOffers from "./pages/ExchangeOffers";
+import AIExchangeMatcher from "./pages/AIExchangeMatcher";
+import About from "./pages/About";
 
 // ============================================================
 // ADMIN PAGES
@@ -60,6 +62,10 @@ function App() {
           <Route path="/" element={<Home />} />
 
           <Route path="/marketplace" element={<Marketplace />} />
+          {/* <Route
+            path="/route-test"
+            element={<h1 className="p-10 text-3xl">ROUTE IS WORKING</h1>}
+          /> */}
 
           <Route path="/product/:id" element={<ProductDetails />} />
 
@@ -71,7 +77,6 @@ function App() {
 
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin/profile/edit" element={<EditProfile />} />
-          
 
           <Route path="/profile/edit" element={<EditProfile />} />
 
@@ -100,6 +105,7 @@ function App() {
           <Route path="/my-exchange-offers" element={<MyExchangeOffers />} />
 
           <Route path="/exchange-offers" element={<ExchangeOffers />} />
+          <Route path="/ai-exchange-matcher" element={<AIExchangeMatcher />} />
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -123,6 +129,7 @@ function App() {
               NOT FOUND
           ================================================== */}
 
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
