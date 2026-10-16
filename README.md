@@ -1,349 +1,402 @@
-[README.md](https://github.com/user-attachments/files/33565091/README.md)
-::: {align="center"}
-# 🛍️ CampusMart AI
+ 
+<div align="center">
 
-### Your Campus. Your Marketplace.
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:07111F,45:123B5D,100:00D4FF&height=220&section=header&text=CampusMart%20AI&fontSize=58&fontColor=FFFFFF&fontAlignY=38&desc=Your%20Campus.%20Your%20Marketplace.&descAlignY=58&descSize=19&animation=fadeIn" alt="CampusMart AI Header"/>
 
-**An AI-powered student-to-student marketplace to buy, sell, exchange,
-and rent campus essentials.**
+# 🎓 CampusMart AI
 
-[![Live
-Demo](https://img.shields.io/badge/Live%20Demo-Visit%20CampusMart-06b6d4?style=for-the-badge&logo=render&logoColor=white)](https://campusmart-ai.onrender.com/)
-[![Backend
-API](https://img.shields.io/badge/Backend%20API-Render-7c3aed?style=for-the-badge&logo=render&logoColor=white)](https://campusmart-vv4s.onrender.com/)
+### AI-Powered Student-to-Student E-Commerce Marketplace
 
-*Connecting students with affordable campus essentials through a
-smarter, community-focused marketplace.*
-:::
+**Your Campus. Your Marketplace.**
 
-------------------------------------------------------------------------
+Buy · Sell · Rent · Exchange — all in one campus-focused platform.
 
-## ✨ About the Project
+[![Live App](https://img.shields.io/badge/🚀_Live_App-Open_CampusMart-00C9FF?style=for-the-badge)](https://campusmart-ai.onrender.com/)
+[![Backend](https://img.shields.io/badge/Backend-Render-7C3AED?style=for-the-badge)](https://campusmart-vv4s.onrender.com/)
+![MERN](https://img.shields.io/badge/Stack-MERN-16A34A?style=for-the-badge)
+![AI](https://img.shields.io/badge/AI-Assisted-EC4899?style=for-the-badge)
 
-**CampusMart AI** is a student-focused e-commerce marketplace designed
-to make campus life more affordable and convenient. Students can
-discover products and explore buying, selling, exchanging, or renting
-within their campus community.
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&pause=1000&color=00D4FF&center=true&vCenter=true&width=700&lines=Find+what+you+need+on+campus.;Give+unused+items+a+second+life.;Buy+less.+Share+more.+Waste+less.;Your+campus.+Your+marketplace." alt="Animated typing text"/>
 
-The project combines a modern web application with AI-assisted shopping
-features to help users discover relevant products, consider fair prices,
-compare buying versus renting, and find possible exchange opportunities.
+</div>
 
-> **Note:** Feature availability depends on the latest code and
-> production configuration. AI price and exchange scores are estimates,
-> not guarantees.
+---
 
-## 🚀 Live Deployment
+## 🌟 About the Project
 
-  --------------------------------------------------------------------------------
-  Service                             Link
-  ----------------------------------- --------------------------------------------
-  🌐 Frontend                         <https://campusmart-ai.onrender.com/>
+**CampusMart AI** is a student-focused e-commerce marketplace designed to make campus shopping easier, smarter, and more accessible.
 
-  ⚙️ Backend                          <https://campusmart-vv4s.onrender.com/>
+Students can explore listings and use marketplace workflows to buy, sell, rent, or exchange useful products. The project combines a modern React frontend, a Node.js and Express backend, and MongoDB, with AI-assisted tools intended to help users make more informed marketplace decisions.
 
-  🔌 API base                         `https://campusmart-vv4s.onrender.com/api`
-  --------------------------------------------------------------------------------
+### 🎯 Our Mission
 
-*Render services may take a little time to wake up after inactivity.*
+- Make student-to-student commerce easier.
+- Encourage reuse through renting and exchanging.
+- Help students discover useful products.
+- Create a simple, convenient marketplace experience.
+- Explore practical applications of AI in e-commerce.
 
-## 🎯 Features
+## 🔗 Live Deployment
 
-### 🛒 Marketplace
+| Service | Link |
+|---|---|
+| 🚀 Frontend Application | https://campusmart-ai.onrender.com/ |
+| ⚙️ Backend Service | https://campusmart-vv4s.onrender.com/ |
+| 🔌 API Base URL | https://campusmart-vv4s.onrender.com/api |
 
--   Browse the marketplace and view product details.
--   Student-to-student product listing and discovery.
--   Buy/sell, exchange, and rental listing types where supported.
--   Product images, condition and availability details.
+> **Note:** Render services may take some time to respond after a period of inactivity.
 
-### 👤 Accounts & Profiles
+## ✨ Key Features
 
--   Student registration and login.
--   Profile viewing and editing.
--   Protected pages and account-based actions.
--   My Listings page.
+### 🛍️ Marketplace
 
-### 🧺 Shopping
+- Browse product listings.
+- View individual product details.
+- Explore items available for different marketplace activities.
+- Create and manage listings through the relevant seller flows.
 
--   Cart and checkout pages.
--   Wishlist.
--   Order history and order details.
--   Seller order management.
--   Notifications and chat pages, subject to backend configuration.
+### 🔐 User Accounts
 
-### 🔄 Exchange
+- Registration and login pages.
+- Profile viewing and editing.
+- Password recovery flow.
+- Authentication-protected pages where configured.
 
--   Exchange listings and offers.
--   My Exchange Offers page.
--   Accept, reject, counter, or cancel offers where supported by the
-    current workflow.
--   **AI Exchange Matcher:** suggests possible exchange listings using
-    product attributes. Scores are rule-based estimates.
+### 🛒 Shopping Experience
 
-### 🏠 Rentals
+- Shopping cart.
+- Checkout flow.
+- User orders.
+- Seller order management.
+- Wishlist for saved products.
 
--   Rental-related pages.
--   My Rentals and Rental Requests pages, where enabled by the backend
-    workflow.
+### 🏠 Rental System
 
-### 🤖 AI-Assisted Features
+- Rental overview.
+- Rental request pages.
+- Rental-focused marketplace workflows.
 
--   **AI Smart Product Finder** --- helps narrow down relevant products.
--   **AI Fair Price Predictor** --- provides estimated price guidance.
--   **AI Buy-vs-Rent Advisor** --- helps compare buying and renting.
--   **AI Exchange Matcher** --- finds potentially suitable exchange
-    candidates.
+### 🔄 Product Exchange
 
-Potential future features---seller assistance, scam-risk analysis,
-personalized recommendations, listing-quality checks, image/video
-analysis, and demand prediction---should be considered roadmap items
-unless implemented and enabled in the current deployment.
+- Exchange offers.
+- View and manage exchange-related activities.
+- AI-assisted exchange matching.
 
-### 🛡️ Admin
+### 🔔 Communication
 
--   Admin login and dashboard.
--   User, product and report management pages, subject to configured
-    admin permissions.
+- Notifications.
+- Chat route.
+- User and marketplace interaction flows.
 
-## 🧰 Tech Stack
+### 👥 Project Information
 
-**Frontend:** React, Vite, React Router, Axios, Tailwind CSS, Lucide
-React, Mapbox GL JS (where used).
+- About page.
+- Team member cards.
+- Links to team profiles where configured.
 
-**Backend:** Node.js, Express.js, MongoDB / MongoDB Atlas, JWT
-authentication, Cloudinary uploads and email/OTP integration where
-configured.
+## 🧠 AI-Assisted Features
 
-**Deployment:** Render frontend and backend; MongoDB Atlas database
-configuration.
+| Feature | Purpose |
+|---|---|
+| **Smart Product Finder** | Helps users narrow down products according to their needs. |
+| **Fair Price Predictor** | Provides price guidance for evaluating product listings. |
+| **Buy-vs-Rent Advisor** | Helps users consider whether buying or renting may be more suitable. |
+| **AI Exchange Matcher** | Suggests potential exchange matches using listing attributes and matching logic. |
 
-## 🗺️ Main Routes
+> **Technical note:** The exchange matcher has used a rule-based scoring approach. It should not be described as a trained machine-learning model unless a trained model has actually been implemented and evaluated. Feature availability should be verified against the current deployment.
 
-  -----------------------------------------------------------------------
-  Page                                Route
-  ----------------------------------- -----------------------------------
-  Home                                `/`
+### 🔮 Future Improvements
 
-  Marketplace                         `/marketplace`
+- AI seller assistant.
+- Listing quality suggestions.
+- Scam and risk indicators.
+- Personalized recommendations.
+- Image-assisted listing creation.
+- Demand prediction and analytics.
+- Improved testing and error handling.
+- Better accessibility and responsive design.
 
-  Product details                     `/product/:id`
+*Roadmap items are planned ideas, not a claim that every feature is already available.*
 
-  Sell                                `/sell`
+## 🧭 Application Routes
 
-  Login / Register                    `/login`, `/register`
+| Route | Description |
+|---|---|
+| `/` | Home page |
+| `/marketplace` | Browse marketplace |
+| `/product/:id` | Product details |
+| `/sell` | Create a listing |
+| `/login` | Login |
+| `/register` | Registration |
+| `/profile` | User profile |
+| `/profile/edit` | Edit profile |
+| `/cart` | Shopping cart |
+| `/checkout` | Checkout |
+| `/orders` | User orders |
+| `/seller/orders` | Seller orders |
+| `/my-listings` | Manage listings |
+| `/wishlist` | Wishlist |
+| `/notifications` | Notifications |
+| `/chat` | Chat |
+| `/my-rentals` | Rental overview |
+| `/rental-requests` | Rental requests |
+| `/my-exchange-offers` | Your exchange offers |
+| `/exchange-offers` | Exchange offers |
+| `/ai-exchange-matcher` | Exchange matching |
+| `/about` | About and team |
+| `/forgot-password` | Password recovery |
 
-  Profile / Edit profile              `/profile`, `/profile/edit`
+*Check `frontend/src/App.jsx` for the latest route configuration.*
 
-  Cart / Checkout                     `/cart`, `/checkout`
+## 🛠️ Technology Stack
 
-  Orders / Order details              `/orders`, `/orders/:id`
+<div align="center">
 
-  Seller orders                       `/seller-orders`
+<img src="https://skillicons.dev/icons?i=react,vite,tailwind,js,nodejs,express,mongodb,git,github,render&perline=5" alt="Technology stack icons"/>
 
-  My listings                         `/my-listings`
+</div>
 
-  Wishlist                            `/wishlist`
+| Layer | Technology |
+|---|---|
+| Frontend | React |
+| Development server and build | Vite |
+| Language | JavaScript |
+| Styling | Tailwind CSS |
+| Icons | Lucide React |
+| API requests | Axios |
+| Backend | Node.js |
+| Server framework | Express.js |
+| Database | MongoDB |
+| Authentication | JWT-based flows where configured |
+| Maps | Mapbox GL where used |
+| Media uploads | Cloudinary where configured |
+| Deployment | Render |
+| Version control | Git and GitHub |
 
-  Notifications / Chat                `/notifications`, `/chat`
+## 🖼️ Screenshots
 
-  My rentals / Rental requests        `/my-rentals`, `/rental-requests`
+Add real screenshots of the current application here to make the repository more informative.
 
-  My exchange offers                  `/my-exchange-offers`
+Recommended structure:
 
-  Exchange offers                     `/exchange-offers`
+```text
+CampusMart/
+├── docs/
+│   └── screenshots/
+│       ├── home.png
+│       ├── marketplace.png
+│       ├── product-details.png
+│       └── ai-exchange-matcher.png
+└── README.md
+```
 
-  AI Exchange Matcher                 `/ai-exchange-matcher`
+Once you have saved screenshots, display them like this:
 
-  About / Our Team                    `/about`
+```html
+<div align="center">
+  <img src="docs/screenshots/home.png" width="85%" alt="CampusMart AI Home Page"/>
+  <p><em>CampusMart AI — Home Page</em></p>
+</div>
+```
 
-  Forgot password                     `/forgot-password`
+## ⚡ Getting Started
 
-  Admin login                         `/admin/login`
+Follow these steps to run the project on your computer.
 
-  Admin dashboard                     `/admin/dashboard`
+### 1. Prerequisites
 
-  Admin users / products / reports    `/admin/users`, `/admin/products`,
-                                      `/admin/reports`
-  -----------------------------------------------------------------------
+Install the following:
 
-Some routes require authentication, valid data or server configuration.
-Keep this table aligned with the current application.
+- Node.js and npm
+- Git
+- MongoDB locally or a MongoDB Atlas database
+- Optional credentials for any enabled email, map, or media services
 
-## ⚙️ Run Locally
+### 2. Clone the Repository
 
-### Prerequisites
+Replace the placeholder with your actual GitHub repository URL.
 
--   Node.js and npm
--   Git
--   MongoDB or MongoDB Atlas access
-
-### 1. Clone your repository
-
-Replace the placeholder with your actual GitHub repository URL:
-
-``` bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY.git
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
 cd CampusMart
 ```
 
-### 2. Install and run the backend
+### 3. Set Up the Frontend
 
-``` bash
-cd backend
-npm install
-```
-
-Create `backend/.env` using the exact variable names expected by your
-backend source code. Typical examples may include:
-
-``` env
-PORT=5000
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_long_random_secret
-CLIENT_URL=http://localhost:5173
-```
-
-Additional variables may be needed for Cloudinary, email, AI services or
-other integrations. Check your source code for the exact names. Then run
-the backend script defined in `backend/package.json`, commonly:
-
-``` bash
-npm run dev
-```
-
-### 3. Install and run the frontend
-
-Open a second terminal:
-
-``` bash
+```bash
 cd frontend
 npm install
 ```
 
-Create `frontend/.env`:
+Create a `frontend/.env` file if required:
 
-``` env
+```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Start Vite:
+Start the development server:
 
-``` bash
+```bash
 npm run dev
 ```
 
-Open the local URL printed in the terminal, usually
-`http://localhost:5173`.
+The frontend normally runs at:
 
-### 🔐 Environment-variable safety
+```text
+http://localhost:5173
+```
 
--   Never commit `.env` files, database credentials, JWT secrets, or
-    private API keys.
--   Set production environment variables in Render.
--   Only variables prefixed with `VITE_` are exposed to frontend/browser
-    code.
--   Restart Vite after changing frontend environment variables.
+### 4. Set Up the Backend
+
+Open a **second terminal** at the project root.
+
+```bash
+cd backend
+npm install
+```
+
+Create a `backend/.env` file using the variable names required by your backend code. Common examples are:
+
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=replace_with_a_long_random_secret
+```
+
+Add other variables only if your code requires them—for example, email, Cloudinary, or Mapbox configuration.
+
+Start the backend using the script defined in `backend/package.json`. For example:
+
+```bash
+npm run dev
+```
+
+If the project does not define a `dev` script, check `backend/package.json` and use the configured start script.
+
+### 5. Verify the Application
+
+1. Confirm that the backend starts without errors.
+2. Confirm that MongoDB connects successfully.
+3. Open the frontend in your browser.
+4. Test registration, login, and the main marketplace flow.
+5. Check browser DevTools → **Network** if API requests fail.
+6. Confirm that `VITE_API_URL` points to the correct API base URL.
+
+## 🔐 Environment Variables and Security
+
+- Never commit real `.env` files.
+- Keep database credentials and JWT secrets private.
+- Use `.env.example` files containing placeholder values only.
+- Variables prefixed with `VITE_` may be exposed in the browser bundle. **Do not put private secrets in frontend variables.**
+- Configure production variables through the hosting provider's dashboard.
+- If a secret is accidentally committed, rotate it immediately.
+
+Review the project's existing `.gitignore` before changing it. Typical entries include:
+
+```gitignore
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+```
 
 ## 📁 Project Structure
 
-``` text
+The following is a high-level example. Adjust it to match the actual repository.
+
+```text
 CampusMart/
 ├── frontend/
 │   ├── public/
 │   │   └── images/
 │   └── src/
-│       ├── components/
 │       ├── pages/
+│       ├── components/
 │       ├── services/
 │       │   └── api.js
 │       ├── App.jsx
-│       ├── main.jsx
-│       └── index.css
+│       └── main.jsx
 ├── backend/
-│   ├── controllers/
-│   ├── models/
 │   ├── routes/
-│   ├── services/
-│   └── server entry file
+│   ├── models/
+│   ├── controllers/
+│   ├── middleware/
+│   └── server.js
+├── docs/
+│   └── screenshots/
 └── README.md
 ```
 
-Adjust the tree if your actual repository structure differs.
+## ✅ Testing Checklist
 
-## 🔌 API Configuration
+- [ ] Frontend starts successfully.
+- [ ] Backend starts successfully.
+- [ ] Database connection works.
+- [ ] Registration and login work.
+- [ ] Product listings and details load correctly.
+- [ ] Seller listing management works.
+- [ ] Cart and checkout flows have been tested.
+- [ ] Orders and wishlist behave as expected.
+- [ ] Rental and exchange flows handle invalid input.
+- [ ] AI tools handle empty states and errors.
+- [ ] Mobile navigation and layouts work.
+- [ ] Production API URL is correct.
+- [ ] No credentials are committed to Git.
+- [ ] README screenshots and team information are accurate.
 
-The frontend uses `VITE_API_URL` when configured. Example production API
-base:
+## 🗺️ Roadmap
 
-``` env
-VITE_API_URL=https://campusmart-vv4s.onrender.com/api
-```
-
-Local development:
-
-``` env
-VITE_API_URL=http://localhost:5000/api
-```
-
-## ✅ Release Checklist
-
--   [ ] Home and Marketplace load.
--   [ ] Product details and images display correctly.
--   [ ] Registration and login work.
--   [ ] Listing creation and upload work.
--   [ ] Cart, checkout and order flows work end-to-end.
--   [ ] Exchange offer actions work.
--   [ ] AI endpoints handle invalid input and missing configuration.
--   [ ] About page and team links work on desktop and mobile.
--   [ ] Production frontend can reach the production API.
--   [ ] No secrets or `.env` files are committed.
-
-## 🛣️ Roadmap
-
--   [x] Core marketplace and product pages
--   [x] Student account and listing pages
--   [x] Cart, wishlist and order-related pages
--   [x] Exchange-related pages and AI exchange matching implementation
--   [x] About Us / Our Team page
--   [ ] Improve AI recommendations with real usage data
--   [ ] Add stronger listing-quality and scam-risk checks
--   [ ] Expand automated testing and monitoring
--   [ ] Continue improving mobile accessibility and performance
-
-Update these checkboxes to reflect the actual implementation and
-deployment status.
-
-## 🤝 Contributing
-
-1.  Fork the repository.
-2.  Create a branch: `git checkout -b feature/your-feature`
-3.  Commit your changes: `git commit -m "Add your feature"`
-4.  Push the branch: `git push origin feature/your-feature`
-5.  Open a Pull Request.
+- [ ] Expand automated testing.
+- [ ] Improve responsive UI and accessibility.
+- [ ] Add clearer listing moderation and reporting.
+- [ ] Evaluate AI-assisted recommendations.
+- [ ] Improve loading, empty, and error states.
+- [ ] Document API endpoints.
+- [ ] Add real application screenshots.
+- [ ] Prepare a short project demo.
 
 ## 👥 Our Team
 
-CampusMart AI is built by a team of four students. Replace the sample
-entries with your teammates' real names, responsibilities and profile
-links.
+Update the table with the real names, roles, photos, and profile links of your group members.
 
--   **Jeet Mondal** --- Team Leader / Full Stack Development ---
-    [GitHub](https://github.com/JEETJM)
--   **Team Member 2** --- Add role and profile link
--   **Team Member 3** --- Add role and profile link
--   **Team Member 4** --- Add role and profile link
+| Team Member | Role | Profile |
+|---|---|---|
+| **Jeet Mondal** | Team Leader · Full Stack Developer | [GitHub](https://github.com/JEETJM) |
+| Team Member 2 | Frontend Developer | Add profile link |
+| Team Member 3 | Backend Developer | Add profile link |
+| Team Member 4 | AI/ML & Testing | Add profile link |
 
-## 📄 License
+For the About page, place approved team photos in `frontend/public/images/team/` and update their paths in `frontend/src/pages/About.jsx`.
 
-No license has been specified here. Add a `LICENSE` file if you intend
-to publish the project under an open-source license.
+## 🤝 Contributing
 
-------------------------------------------------------------------------
+Contributions and suggestions are welcome.
 
-::: {align="center"}
-### Made for students, built for campus life.
+1. Create a feature branch or fork the repository.
+2. Make focused, clearly explained changes.
+3. Test the affected frontend and backend flows.
+4. Never commit private credentials.
+5. Submit a pull request with a summary and testing notes.
 
-**CampusMart AI · Your Campus. Your Marketplace.**
+## 🛡️ Responsible Use
 
-[🚀 Open the Live App](https://campusmart-ai.onrender.com/)
-:::
+CampusMart AI is a student project. Users should independently verify product details, seller information, prices, and exchange terms before making decisions. AI-assisted suggestions are guidance—not a guarantee of product quality, fair pricing, safety, or successful exchange.
+
+## 📜 License
+
+No license has been specified in this README. If you plan to distribute the project as open source, choose a license and add a `LICENSE` file. Without a license, others do not automatically receive permission to reuse, modify, or distribute the code.
+
+---
+
+<div align="center">
+
+### 💙 Built for Student Communities
+
+**CampusMart AI — Your Campus. Your Marketplace.**
+
+[![Explore CampusMart](https://img.shields.io/badge/EXPLORE_CAMPUSMART-00C9FF?style=for-the-badge&logo=googlechrome&logoColor=white)](https://campusmart-ai.onrender.com/)
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:00D4FF,55:123B5D,100:07111F&height=120&section=footer" alt="Animated footer"/>
+
+</div>
