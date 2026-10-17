@@ -22,28 +22,28 @@ const teamMembers = [
     email: "jm382118@gmail.com",
   },
   {
-    name: "Team Member 2",
+    name: "Annesha Mondal",
     role: "Frontend Developer",
     bio: "Contributing to the user interface and responsive design.",
-    image: "/images/team/member-2.jpg",
+    image: "/images/team/Annesha.jpg",
     github: "",
     linkedin: "",
-    email: "",
+    email: "anneshamondal2507@gmail.com",
   },
   {
-    name: "Team Member 3",
+    name: "Subarna Mondal",
     role: "Backend Developer",
     bio: "Contributing to APIs, database integration and application functionality.",
-    image: "/images/team/member-3.jpg",
-    github: "",
-    linkedin: "",
-    email: "",
+    image: "/images/team/Subarna.jpeg",
+    github: "https://github.com/Subarna5566",
+    linkedin: "https://www.linkedin.com/in/subarna-mondal-800754379",
+    email: "subarnamondal5566@gmail.com",
   },
   {
-    name: "Team Member 4",
+    name: "Imran Sk",
     role: "AI/ML & Testing",
     bio: "Contributing to AI-powered features, testing and improving the user experience.",
-    image: "/images/team/member-4.jpg",
+    image: "/images/team/Imran.jpg",
     github: "",
     linkedin: "",
     email: "",
@@ -101,6 +101,7 @@ function TeamCard({ member, index }) {
         >
           {index === 0 ? "Team Leader" : `Team Member 0${index + 1}`}
         </span>
+
       </div>
 
       <div className="p-6">
