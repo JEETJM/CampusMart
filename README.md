@@ -367,7 +367,7 @@ Update the table with the real names, roles, photos, and profile links of your g
 | Team Member | Role | Profile |
 |---|---|---|
 | **Jeet Mondal** | Team Leader · Full Stack Developer | [GitHub](https://github.com/JEETJM) |
-| **Annesha Mondal** | Frontend Developer | Add profile link |
+| **Annesha Mondal** | Frontend Developer |  [GitHub](https://github.com/annesha2) |
 | **Subarna Mondal** | Backend Developer | [GitHub](https://github.com/Subarna5566) |
 | **Imran Sk** | AI/ML & Testing | Add profile link |
 
